@@ -592,7 +592,7 @@ function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); schedulePu
    실시간 공유 엔진 (Supabase) — 공유: tasks / 개인(로컬): 뷰 설정
    링크만 있으면 모두 실시간 열람·편집 (publishable 키 내장 + RLS)
    ============================================================ */
-let sb=null, applyingRemote=false, pushTimer=null;
+let sb=null, applyingRemote=false, pushTimer=null, lastPushedJson=null;
 const clientId=(()=>{ let c=localStorage.getItem("kidoongi_client"); if(!c){ c=Math.random().toString(36).slice(2); localStorage.setItem("kidoongi_client",c); } return c; })();
 function isPlaceholder(){ return !SYNC.url || SYNC.url.indexOf("http")!==0 || !SYNC.anonKey || SYNC.anonKey.indexOf("__")===0; }
 function syncOn(){ return SYNC.enabled && sb!==null; }
@@ -611,6 +611,7 @@ async function initSync(){
         const d=payload.new && payload.new.data;
         if(!d || d.by===clientId) return;
         applyingRemote=true; state.tasks=d.tasks||state.tasks; render(); applyingRemote=false;
+        lastPushedJson=JSON.stringify(state.tasks);
         if(drawerOpenId){ const t=taskById(drawerOpenId); if(t) fillDrawer(t); }
         toast("🔄 다른 사용자의 변경이 반영되었습니다");
       })
@@ -624,6 +625,7 @@ async function pullRemote(initial){
     if(error){ console.warn(error); setSyncPill("error", tableMissing(error)?"🔴 테이블 미생성 — SQL 실행 필요":"🔴 읽기 오류"); return; }
     if(data && data.data && Array.isArray(data.data.tasks)){
       applyingRemote=true; state.tasks=data.data.tasks; if(initial) render(); applyingRemote=false;
+      lastPushedJson=JSON.stringify(state.tasks);
     }else{
       await pushRemoteNow(); // 최초 접속자: 현재 데이터로 시드
     }
@@ -631,14 +633,17 @@ async function pullRemote(initial){
 }
 async function pushRemoteNow(){
   if(!syncOn()) return;
+  const js=JSON.stringify(state.tasks);
+  if(js===lastPushedJson){ setSyncPill("live","🟢 실시간 연결"); return; }  // 실제 과업 변경만 저장
   try{
     const {error}=await sb.from(SYNC.table).upsert({ id:SYNC.row, data:{ tasks:state.tasks, ts:Date.now(), by:clientId } });
     if(error){ console.warn(error); setSyncPill("error", tableMissing(error)?"🔴 테이블 미생성 — SQL 실행 필요":"🔴 저장 오류(권한/RLS)"); }
-    else setSyncPill("live","🟢 실시간 연결 · 저장됨");
+    else { lastPushedJson=js; setSyncPill("live","🟢 실시간 연결 · 저장됨"); }
   }catch(e){ console.warn("push",e); setSyncPill("error","🔴 저장 오류"); }
 }
 function schedulePush(){
   if(!syncOn() || applyingRemote) return;
+  if(JSON.stringify(state.tasks)===lastPushedJson) return;   // 뷰(필터·접기·색상)만 바뀐 경우 저장 안 함
   setSyncPill("saving","🔵 저장 중…");
   clearTimeout(pushTimer); pushTimer=setTimeout(pushRemoteNow,500);
 }
