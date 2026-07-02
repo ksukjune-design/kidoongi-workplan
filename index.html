@@ -264,7 +264,8 @@
     <button class="btn sm" id="btnCP">🎯 임계경로</button>
     <button class="btn sm" id="btnConnect">🔗 연결 모드</button>
     <button class="btn sm" id="btnAdd">＋ 과업 추가</button>
-    <button class="btn sm primary" id="btnExport">📄 1P 요약표</button>
+    <button class="btn sm" id="btnExcel">⬇ 엑셀 표</button>
+    <button class="btn sm primary" id="btnReport">✨ 1P 보고서(AI)</button>
     <button class="btn sm warn" id="btnReset">↺ 초기화</button>
     <button class="btn sm" id="btnHelp">? 도움말</button>
   </div>
@@ -339,14 +340,15 @@
   </div>
 </div>
 
-<!-- Export modal -->
+<!-- AI 1P 보고서 modal -->
 <div class="overlay" id="pptOverlay">
   <div class="modal">
     <div class="mhead">
-      <h3>1페이지 요약표 (10pt 맑은 고딕 · PPT 붙여넣기용)</h3>
-      <span class="statpill" id="pptCount"></span>
+      <h3>✨ AI 1페이지 보고서 <span style="font-weight:400;color:var(--muted);font-size:12px">Gemini · 10pt 맑은고딕 · PPT용</span></h3>
       <div class="spacer"></div>
-      <button class="btn sm" id="pptCopy">📋 표 복사</button>
+      <button class="btn sm" id="pptRegen">🔄 재생성</button>
+      <button class="btn sm" id="pptKey">🔑 키변경</button>
+      <button class="btn sm" id="pptCopy">📋 복사</button>
       <button class="btn sm" id="pptPrint">🖨 인쇄/PDF</button>
       <button class="btn sm" id="pptClose">닫기</button>
     </div>
@@ -369,7 +371,8 @@
         <p><b>⚙ 필터</b> — 조직/업무성격 칩을 눌러 특정 그룹만 강조. 검색창으로 과업명 필터.</p>
         <p><b>💾 저장</b> — 뷰 설정(필터·접기·색상)은 각자 브라우저에 저장됩니다. <kbd>초기화</kbd>로 기본값 복원.</p>
         <p><b>🔗 실시간 공유(함께 이어서 작업)</b> — 데이터는 Supabase에 실시간 공유됩니다. <b>링크만 있으면 누구나</b> 열람·편집할 수 있고, 변경은 즉시 모두에게 반영됩니다(좌상단 <b>🟢 실시간 연결</b>). 별도 로그인/토큰이 필요 없습니다.</p>
-        <p><b>📄 요약표</b> — 10pt 맑은 고딕 1페이지 테이블로 내보내 PPT에 붙여넣기(표 복사) 또는 PDF 인쇄.</p>
+        <p><b>⬇ 엑셀 표</b> — 전체 과업(약 95개)을 CSV로 다운로드(엑셀에서 바로 열림).</p>
+        <p><b>✨ 1P 보고서(AI)</b> — Gemini가 워크플랜을 <b>1페이지 경영 보고서</b>로 압축 생성(전체 나열 X, 부문·마일스톤·임계경로 요약). 10pt 맑은고딕, PPT 붙여넣기(복사)·PDF 인쇄. 최초 1회 <b>Gemini API 키</b> 입력 필요(브라우저에만 저장). <kbd>🔄 재생성</kbd>으로 다시 생성.</p>
       </div>
     </div>
   </div>
@@ -1254,44 +1257,108 @@ function renderStats(){
 }
 
 /* ============================================================
-   1페이지 요약표 내보내기
+   (1) 엑셀용 표 다운로드 (CSV, 전체 과업)
    ============================================================ */
-$("btnExport").onclick=()=>{
-  const wrap=$("pptWrap");
-  let rows="";
-  let total=0;
+$("btnExcel").onclick=()=>{
+  const cols=["부문","과업","담당조직","업무성격","시작일","종료일","기간(일)","마일스톤","선행과업","메모"];
+  const rows=[cols];
+  GROUPS.forEach(g=>{
+    state.tasks.filter(t=>t.g===g.id).sort((a,b)=>di(a.d)-di(b.d)).forEach(t=>{
+      rows.push([ g.name, t.name, (ORGS[t.org]||{}).name||t.org, (NATURES[t.nat]||{}).name||t.nat,
+        t.d, t.e, durDays(t), t.m?"★":"",
+        (t.dep||[]).map(id=>{const p=taskById(id);return p?p.name:id;}).join(" / "),
+        (t.note||"").replace(/\s+/g," ").trim() ]);
+    });
+  });
+  const body=rows.map(r=>r.map(c=>{ c=String(c==null?"":c); return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c; }).join(",")).join("\r\n");
+  const blob=new Blob(["﻿"+body],{type:"text/csv;charset=utf-8;"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="키둥이_워크플랜_"+new Date().toISOString().slice(0,10)+".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  toast("엑셀용 CSV 다운로드 ("+(rows.length-1)+"행)");
+};
+
+/* ============================================================
+   (2) AI 1페이지 보고서 (Gemini 호출)
+   ============================================================ */
+const GEMINI={ model:"gemini-2.5-flash", keyLS:"kidoongi_gemini_key" };
+const REPORT_PROMPT=`너는 PM 보좌 AI다. 아래 '키둥이 서비스 런칭 워크플랜'(키디키디 APP Add-on LLM 큐레이팅 검색 서비스, 2026-09-01 런칭)을 경영진 보고용 **1페이지 요약 보고서**로 압축하라.
+[규칙]
+- 절대 개별 과업(약 95개)을 그대로 나열하지 말 것. 부문·페이즈 단위로 핵심만 요약.
+- 출력은 코드펜스/설명 없이 **순수 HTML 조각**만. 최상위 <div>로 시작.
+- 폰트 '맑은 고딕' 약 10pt 기준, A4 가로 1페이지에 들어갈 분량으로 간결하게.
+- 표는 반드시 <table class="ppt"> 사용(테두리 있는 형태).
+[구성]
+1) <h2> 제목 + 1~2줄 개요(핵심 일정: 킥오프 6/24 → 정식 런칭 9/1(화), 총 11주).
+2) 부문별 요약 <table class="ppt">(11행 이내): 열 = 부문 | 핵심 활동(1~2개로 압축) | 담당 | 기간 | 핵심 마일스톤.
+3) 6단계 페이즈 타임라인 1줄 요약.
+4) 핵심 마일스톤(★) 목록 5~8개(날짜 포함).
+5) 임계경로·핵심 리스크/의사결정 3~4개(예: 정식 네이밍 확정, 데이터 정제·색인, 커머스플랫폼 연동범위 확정, 인바운드 30% 부하 대응).
+- 한국어, 개조식. 과장 없이 사실 기반.`;
+
+function buildWorkplanSummary(){
+  let s="런칭일: 2026-09-01(화), 킥오프: 2026-06-24, 기간: 2026-06-22~09-06(11주).\n";
+  s+="6단계 페이즈: "+PHASES.map((p,i)=>"P"+(i+1)+" "+p.name+"(W"+p.w0+"~W"+p.w1+")").join(", ")+"\n\n";
   GROUPS.forEach(g=>{
     const ts=state.tasks.filter(t=>t.g===g.id).sort((a,b)=>di(a.d)-di(b.d));
     if(!ts.length) return;
-    rows+=`<tr class="grp"><td colspan="8">${g.icon} ${g.name} <span style="font-weight:400;color:#555">— ${g.desc}</span></td></tr>`;
-    ts.forEach(t=>{
-      total++;
-      const dep=(t.dep||[]).map(id=>{const p=taskById(id);return p?p.name.replace(/^★\s*/,'').slice(0,10):'';}).filter(Boolean).join(", ");
-      rows+=`<tr>
-        <td>${t.m?'<span class="ms">◆ </span>':''}${esc(t.name)}</td>
-        <td class="c">${(ORGS[t.org]||{}).short||t.org}</td>
-        <td class="c">${(NATURES[t.nat]||{}).name||t.nat}</td>
-        <td class="c">${t.d.slice(5).replace('-','/')}</td>
-        <td class="c">${t.e.slice(5).replace('-','/')}</td>
-        <td class="c">${durDays(t)}d</td>
-        <td>${esc(dep)}</td>
-      </tr>`;
-    });
+    const mn=Math.min.apply(null,ts.map(t=>di(t.d))), mx=Math.max.apply(null,ts.map(t=>di(t.e)));
+    s+="["+g.name+"] 리드:"+((ORGS[g.lead]||{}).short||g.lead)+", 기간:"+dstr(mn).slice(5)+"~"+dstr(mx).slice(5)+", 과업 "+ts.length+"개\n";
+    ts.forEach(t=>{ s+="  - "+t.name+" ("+((ORGS[t.org]||{}).short||t.org)+", "+t.d.slice(5)+"~"+t.e.slice(5)+(t.m?", ★마일스톤":"")+")\n"; });
   });
-  wrap.innerHTML=`<table class="ppt">
-    <caption>키둥이 서비스 런칭 워크플랜 (킥오프 6/24 → 런칭 9/1) · 총 ${total}개 과업</caption>
-    <thead><tr><th style="width:34%">과업</th><th>담당</th><th>업무성격</th><th>시작</th><th>종료</th><th>기간</th><th style="width:20%">선행 과업</th></tr></thead>
-    <tbody>${rows}</tbody></table>`;
-  $("pptCount").textContent=`${total}개 과업 · 10pt 맑은 고딕`;
+  return s;
+}
+function getGemKey(){ return localStorage.getItem(GEMINI.keyLS)||""; }
+function promptGeminiKey(){
   $("pptOverlay").classList.add("show");
-};
+  $("pptWrap").innerHTML=`<div style="padding:26px;color:#111">
+    <b style="font-size:14px">🔑 Gemini API 키 입력</b>
+    <p style="color:#555;font-size:12.5px;margin:8px 0 14px">이 브라우저에만 저장되며 저장소/파일에는 올라가지 않습니다. (Google AI Studio 발급)</p>
+    <input id="gemKeyInput" style="width:64%;padding:9px;border:1px solid #bbb;border-radius:6px;font-size:13px" placeholder="AIza…">
+    <button id="gemKeySave" style="padding:9px 16px;margin-left:8px;border:none;border-radius:6px;background:#4F46E5;color:#fff;font-weight:700;cursor:pointer">저장 후 생성</button>
+  </div>`;
+  $("gemKeyInput").focus();
+  $("gemKeySave").onclick=()=>{ const v=$("gemKeyInput").value.trim(); if(v){ localStorage.setItem(GEMINI.keyLS,v); toast("Gemini 키 저장됨"); generateReport(); } };
+  $("gemKeyInput").onkeydown=(e)=>{ if(e.key==="Enter") $("gemKeySave").click(); };
+}
+async function generateReport(){
+  const key=getGemKey();
+  if(!key){ promptGeminiKey(); return; }
+  $("pptOverlay").classList.add("show");
+  $("pptWrap").innerHTML=`<div style="padding:48px;text-align:center;color:#444">
+    <div style="font-size:24px">✨</div><b>Gemini가 1페이지 보고서를 작성 중…</b>
+    <div style="color:#888;font-size:12px;margin-top:6px">수 초 정도 걸립니다</div></div>`;
+  try{
+    const prompt=REPORT_PROMPT+"\n\n[워크플랜 데이터]\n"+buildWorkplanSummary();
+    const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI.model+":generateContent?key="+encodeURIComponent(key),{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.4, maxOutputTokens:8192, thinkingConfig:{thinkingBudget:0}} })
+    });
+    const j=await res.json();
+    if(!res.ok){ throw new Error((j.error&&j.error.message)||("HTTP "+res.status)); }
+    let html=((((j.candidates||[])[0]||{}).content||{}).parts||[]).map(p=>p.text||"").join("");
+    html=html.replace(/```html/gi,"").replace(/```/g,"").trim();
+    if(!html){ throw new Error("빈 응답 (안전필터 또는 토큰초과 가능)"); }
+    $("pptWrap").innerHTML=html;
+    toast("보고서 생성 완료 ✓");
+  }catch(e){
+    const isKey=/API key|API_KEY|invalid|permission|PERMISSION|403|400/i.test(e.message);
+    $("pptWrap").innerHTML='<div style="padding:28px;color:#b00020">보고서 생성 실패: '+esc(e.message)+
+      (isKey?'<br><br><button id="gemKeyRetry" style="padding:8px 14px;border:none;border-radius:6px;background:#4F46E5;color:#fff;cursor:pointer">🔑 키 다시 입력</button>':'')+'</div>';
+    const rb=document.getElementById("gemKeyRetry"); if(rb) rb.onclick=promptGeminiKey;
+  }
+}
+$("btnReport").onclick=generateReport;
+$("pptRegen").onclick=generateReport;
+$("pptKey").onclick=promptGeminiKey;
 $("pptClose").onclick=()=>$("pptOverlay").classList.remove("show");
 $("pptPrint").onclick=()=>window.print();
 $("pptCopy").onclick=()=>{
   const el=$("pptWrap");
   const range=document.createRange(); range.selectNode(el);
   const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
-  try{ document.execCommand("copy"); toast("표 복사됨 — PPT에 붙여넣기(Ctrl+V)"); }catch(e){ toast("복사 실패 — 수동 선택하세요"); }
+  try{ document.execCommand("copy"); toast("복사됨 — PPT에 붙여넣기(Ctrl+V)"); }catch(e){ toast("복사 실패 — 수동 선택하세요"); }
   sel.removeAllRanges();
 };
 
