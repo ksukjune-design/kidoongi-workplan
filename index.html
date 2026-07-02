@@ -156,6 +156,26 @@
   .bar.milestone.cp .dia{outline:2px solid #ff5d8f;outline-offset:2px;box-shadow:0 0 10px rgba(255,93,143,.9);}
   svg.deps path.dep.cp{stroke:#ff5d8f;opacity:.95;stroke-width:2.6;marker-end:url(#arrowH);}
   .cpbadge{position:absolute;left:-7px;top:-7px;background:#ff5d8f;color:#fff;font-size:8px;font-weight:900;padding:0 4px;border-radius:8px;z-index:12;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.5);}
+  /* 진행 상태 */
+  .bar .pbar{position:absolute;left:0;bottom:0;height:3px;background:rgba(255,255,255,.9);border-radius:0 2px 2px 0;pointer-events:none;z-index:1;box-shadow:0 0 4px rgba(0,0,0,.25);}
+  .bar.st-done{filter:saturate(.75);}
+  .bar.st-done .pbar{background:#16a34a;}
+  .bar.st-doing .pbar{background:#0ea5e9;}
+  .bar.st-todo .pbar{background:transparent;}
+  .bar .bdone{flex:0 0 auto;margin-left:4px;font-size:11px;font-weight:900;color:#0a7a34;background:rgba(255,255,255,.92);border-radius:50%;width:15px;height:15px;display:inline-flex;align-items:center;justify-content:center;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.25);}
+  .bar .bwarn{flex:0 0 auto;margin-left:4px;font-size:11px;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4));}
+  .bar.overdue{outline:2px solid #ef4444;outline-offset:1px;}
+  .bar.overdue .blabel{text-decoration:none;}
+  .bar.milestone.st-done .dia{background:#22c55e!important;}
+  .bar.milestone.st-doing .dia{box-shadow:0 0 0 3px rgba(56,189,248,.5),0 2px 8px rgba(0,0,0,.5);}
+  /* 사이드바 상태점 */
+  .rowlab .sdot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 1px rgba(0,0,0,.25);}
+  .rowlab .sdot.od{box-shadow:0 0 0 2px #ef4444;}
+  /* 상단 진행바 */
+  .progtrack{height:5px;background:#0c1220;border-bottom:1px solid var(--line);position:relative;flex:0 0 auto;}
+  .progfill{height:100%;background:linear-gradient(90deg,#22c55e,#38bdf8);width:0;transition:width .4s;box-shadow:0 0 8px rgba(56,189,248,.5);}
+  .progtrack .pmark{position:absolute;top:-1px;height:7px;width:2px;background:var(--launch);}
+  #stpDelay[data-n]:not([data-n="0"]){color:#ff9d9d;border-color:rgba(255,107,107,.4);background:rgba(255,107,107,.08);}
 
   .connecting .bar{cursor:crosshair;}
   .connect-hint{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--accent);color:#0b1020;padding:9px 18px;border-radius:24px;font-weight:800;font-size:12.5px;z-index:200;box-shadow:var(--shadow);display:none;}
@@ -260,9 +280,10 @@
     </div>
     <div class="spacer"></div>
     <div class="statpill" id="syncPill" title="실시간 공유 상태">🟡 로컬 저장</div>
-    <div class="statpill">BAR <b id="stBars">0</b></div>
+    <div class="statpill">과업 <b id="stBars">0</b></div>
+    <div class="statpill" title="완료 과업 / 완료율" style="color:#7ef2b0;border-color:rgba(126,242,176,.35)">완료 <b id="stDone">0</b> <span id="stPct" style="opacity:.85">0%</span></div>
+    <div class="statpill" id="stpDelay" title="지연(종료일 경과·미완료)">지연 <b id="stDelay">0</b></div>
     <div class="statpill">연결 <b id="stDeps">0</b></div>
-    <div class="statpill">부문 <b id="stGroups">11</b></div>
     <div class="countdown">
       <div class="big" id="cdDays">D-?</div>
       <div class="lab">TO LAUNCH · 9/1</div>
@@ -296,8 +317,13 @@
     <button class="btn sm" id="btnHelp">? 도움말</button>
   </div>
 
+  <!-- 전체 진행바 -->
+  <div class="progtrack" title="전체 완료율(기간 가중)"><div class="progfill" id="progFill"></div></div>
+
   <!-- Filter bar -->
   <div class="filterbar" id="filterbar">
+    <span class="flab">진행</span>
+    <div class="filsec" id="statFilters"></div>
     <span class="flab">조직</span>
     <div class="filsec" id="orgFilters"></div>
     <span class="flab">업무성격</span>
@@ -351,6 +377,7 @@
       <div class="fld"><label>담당 조직</label><select id="fOrg"></select></div>
       <div class="fld"><label>업무성격</label><select id="fNat"></select></div>
     </div>
+    <div class="fld"><label>진행 상태</label><select id="fStat"></select></div>
     <div class="fld"><label><input type="checkbox" id="fMile" style="width:auto;margin-right:6px;vertical-align:middle;">마일스톤 (핵심 확정/결정 지점)</label></div>
     <div class="fld"><label>메모 / 제반사항</label><textarea id="fNote"></textarea></div>
     <div class="fld"><label>선행 과업 (연결)</label>
@@ -391,6 +418,7 @@
         <p><b>📅 간트차트</b> — 가로축은 6/22(월)~9/6(일) 11주 일단위 달력, 세로축은 11개 부문. 각 BAR는 과업의 시작~종료일.</p>
         <p><b>✏️ 편집</b> — BAR를 <b>드래그</b>하면 일정이 이동합니다. BAR <b>양끝</b>을 잡아 늘리면 기간이 조절됩니다. BAR를 <b>클릭</b>하면 우측 편집 패널이 열립니다(과업명·일정·담당·성격·선행·메모 수정, 삭제).</p>
         <p><b>🔗 연결</b> — <kbd>연결 모드</kbd> 버튼을 켠 뒤 <b>선행 과업 → 후행 과업</b> 순으로 BAR를 클릭하면 화살표가 생성됩니다. 화살표를 클릭하면 삭제됩니다. (편집 패널에서도 선행 추가/삭제 가능)</p>
+        <p><b>✅ 진행 상태</b> — BAR를 클릭해 <b>예정/진행중/완료</b>를 설정하면, 바 하단 진행선·완료(✓)·상태점이 표시됩니다. 종료일이 지났는데 미완료면 <b>지연(⚠·빨강 테두리)</b>으로 자동 표시. 상단에 <b>완료율·지연 수</b>와 전체 <b>진행바</b>가 집계되고, 필터의 <b>진행</b> 칩으로 상태별로 볼 수 있습니다. 노란 "오늘" 선은 실제 오늘 날짜로 움직입니다.</p>
         <p><b>🎯 임계경로</b> — 버튼을 켜면 <b>9/1 런칭을 결정하는 과업 체인</b>(가장 긴 선행 경로)이 분홍색으로 강조됩니다. 이 경로가 지연되면 런칭일이 밀립니다.</p>
         <p><b>🗂 페이즈</b> — 상단 밴드는 6단계(킥오프·발굴 → 설계·확정 → 구축·개발 → 통합·연동 → QA·안정화 → 런칭·운영). 노란 점선 밴드는 <b>이번 주(7/1)</b>.</p>
         <p><b>📂 접기</b> — 왼쪽 부문 헤더를 클릭하면 해당 부문 과업들이 하나의 요약 BAR로 뭉쳐집니다.</p>
@@ -415,7 +443,8 @@
    ============================================================ */
 const DAY0 = "2026-06-22";           // 월요일 (킥오프 주 시작)
 const DAYN = 77;                     // 6/22 ~ 9/6 = 11주
-const TODAY = "2026-07-01";
+let   TODAY = "2026-07-03";           // 실제 오늘로 init()에서 갱신(동적)
+const STATUS_SEED_REF = "2026-07-03"; // 초기 상태 스냅샷 기준일
 const LAUNCH = "2026-09-01";
 const LS_KEY = "kidoongi_gantt_v2";
 
@@ -477,6 +506,13 @@ const NATURES = {
   build_attach:{name:"개발-얹히는 것", color:"#fb923c"},
   ops_feedback:{name:"운영-피드백", color:"#2dd4bf"},
   ops_mkt:     {name:"운영-마케팅·상품", color:"#f472b6"},
+};
+
+/* ---- 진행 상태 ---- */
+const STATUS = {
+  todo:  {name:"예정",   color:"#94a3b8", pct:0},
+  doing: {name:"진행중", color:"#38bdf8", pct:0.5},
+  done:  {name:"완료",   color:"#22c55e", pct:1},
 };
 
 /* ---- 기본 과업 데이터 (BAR) ---- */
@@ -591,7 +627,7 @@ const DEFAULT_TASKS = [
  {id:"t1105", g:"G11", org:"AITF", nat:"ops_feedback", name:"UAT (사업부문 검수)", d:"2026-08-24", e:"2026-08-28", dep:["t1104","t708"], note:"서비스 품질 최종 검수(클라이언트)."},
  {id:"t1106", g:"G11", org:"CODESTEP", nat:"ops_feedback", name:"버그 픽스 · 안정화", d:"2026-08-24", e:"2026-08-30", dep:["t1104","t107"], note:"베타·UAT 결함 수정."},
  {id:"t1107", g:"G11", org:"INFRA", nat:"ops_feedback", name:"릴리즈 리허설 · 롤백 계획", d:"2026-08-28", e:"2026-08-30", dep:["t1105"], note:"배포 순서·롤백 시나리오 점검."},
- {id:"t1108", g:"G11", org:"CODESTEP", nat:"build_attach", name:"프로덕션 배포 (키디 APP 업데이트)", d:"2026-08-31", e:"2026-09-01", dep:["t1107","t108","t1106"], note:"키디키디 APP 업데이트에 키둥이 포함 배포."},
+ {id:"t1108", g:"G11", org:"CODESTEP", nat:"build_attach", name:"프로덕션 배포 (키디 APP 업데이트)", d:"2026-08-31", e:"2026-09-01", dep:["t1107","t108","t1106","t120"], note:"키디키디 APP 업데이트에 키둥이 포함 배포. 스토어 승인(t120) 완료 전제."},
  {id:"t1109", g:"G11", org:"AITF", nat:"ops_feedback", name:"정식 런칭 & 초기 모니터링", d:"2026-09-01", e:"2026-09-03", dep:["t1108","t109"], note:"오픈 직후 지표·오류 실시간 모니터링."},
  {id:"t1110", g:"G11", org:"CODESTEP", nat:"ops_feedback", name:"초기 핫픽스 · 긴급 대응", d:"2026-09-01", e:"2026-09-06", dep:["t1109"], note:"크래시율·오류 즉시 대응."},
  {id:"t1111", g:"G11", org:"MD", nat:"ops_feedback", name:"런칭 후 피드백 수집·리텐션 점검", d:"2026-09-02", e:"2026-09-06", dep:["t1109"], note:"초기 사용자 피드백·리텐션 방어."},
@@ -600,6 +636,13 @@ const DEFAULT_TASKS = [
  {id:"t111", g:"G1", org:"AITF", nat:"plan", name:"인프라 담당자·소통담당자 셋업 요청", d:"2026-07-01", e:"2026-07-03", dep:["t102"], note:"조성수님 파트 실무자 1명 TF 상주(데이터·인프라)."},
  {id:"t112", g:"G3", org:"AITF", nat:"plan", name:"옷 外 카테고리 서비스 범위 의견 확정", d:"2026-07-01", e:"2026-07-06", dep:["t104"], note:"분유·유모차 등 별도 서비스 여부. 용품 로직 1차 연결."},
  {id:"t110", g:"G6", org:"INNO", nat:"build_make", name:"상세페이지 데이터소스 협조·담당자 매칭", d:"2026-07-01", e:"2026-07-06", dep:["t102"], note:"조성수팀↔데이터 인터페이스 담당자 매칭."},
+
+ // 런칭 필수 보강 과업 (원점 재점검 반영)
+ {id:"t121", g:"G1", org:"AITF", nat:"plan", name:"개인정보처리방침·이용약관·법무 검토", d:"2026-07-20", e:"2026-08-10", dep:["t104"], note:"CustID·이용정보 별도 적치에 따른 개인정보 동의·약관 개정·법무 검토. 런칭 전 필수."},
+ {id:"t124", g:"G5", org:"INFRA", nat:"ops_feedback", name:"모니터링·장애 알림(대시보드) 셋업", d:"2026-08-12", e:"2026-08-21", dep:["t507"], note:"오류율·응답속도·트래픽 대시보드 및 장애 알림(임계치) 구성. 런칭 안정 운영 대비."},
+ {id:"t122", g:"G3", org:"DATA", nat:"ops_feedback", name:"런칭 지표·퍼널 이벤트 계측 설계 (GA4)", d:"2026-07-27", e:"2026-08-07", dep:["t205"], note:"키둥이 진입·질의·추천클릭·상품랜딩·전환 퍼널 이벤트 태깅 설계. 런칭 효과 측정 기준."},
+ {id:"t123", g:"G10", org:"MD", nat:"ops_mkt", name:"CS·운영 매뉴얼·FAQ 준비", d:"2026-08-12", e:"2026-08-25", dep:["t608"], note:"신규 서비스 문의 대응 스크립트·FAQ·오답/불만 에스컬레이션 절차. 런칭 CS 대비."},
+ {id:"t120", g:"G11", org:"PLAT_ARCH", nat:"build_attach", name:"앱스토어 심사 제출·승인 (iOS/Android)", d:"2026-08-25", e:"2026-08-31", dep:["t708","t1104"], note:"키둥이 임베드 포함 키디 APP 업데이트 빌드 스토어 제출→심사→승인. 심사 리드타임(iOS 1~3일) 고려, 9/1 배포 전 승인 필수. ★임계경로."},
 ];
 
 /* ============================================================
@@ -612,9 +655,11 @@ let state = load() || {
   dw: 26,
   filterOrg: [],   // empty = all
   filterNat: [],
+  filterStat: [],
   q: "",
   showCP: false
 };
+if(!state.filterStat) state.filterStat=[];
 function load(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)); }catch(e){ return null; } }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); schedulePush(); }
 
@@ -703,6 +748,11 @@ let RH=34, HEADERH=78, BARH=22, LABELW=340;
 function cssnum(v){ return parseInt(getComputedStyle(document.documentElement).getPropertyValue(v)); }
 
 function taskById(id){ return state.tasks.find(t=>t.id===id); }
+/* ---- 진행 상태 helper ---- */
+function statusOf(t){ return STATUS[t.s]?t.s:"todo"; }
+function isOverdue(t){ return !t.m && statusOf(t)!=="done" && di(t.e) < di(TODAY); }
+function deriveStatus(t,ref){ if(di(t.e) < di(ref)) return "done"; if(di(t.d)<=di(ref) && di(ref)<=di(t.e)) return "doing"; return "todo"; }
+function ensureStatus(){ let ch=false; state.tasks.forEach(t=>{ if(!t.s){ t.s=deriveStatus(t,STATUS_SEED_REF); ch=true; } }); return ch; }
 function orgColor(o){ return (ORGS[o]||{}).color || "#888"; }
 function natColor(n){ return (NATURES[n]||{}).color || "#888"; }
 function barColor(t){ return state.colorMode==="org" ? orgColor(t.org) : natColor(t.nat); }
@@ -710,6 +760,10 @@ function barColor(t){ return state.colorMode==="org" ? orgColor(t.org) : natColo
 function passFilter(t){
   if(state.filterOrg.length && !state.filterOrg.includes(t.org)) return false;
   if(state.filterNat.length && !state.filterNat.includes(t.nat)) return false;
+  if(state.filterStat && state.filterStat.length){
+    const st=isOverdue(t)?"overdue":statusOf(t);
+    if(!state.filterStat.includes(st)) return false;
+  }
   if(state.q && !t.name.toLowerCase().includes(state.q.toLowerCase())) return false;
   return true;
 }
@@ -736,6 +790,7 @@ function gridW(){ return LABELW + DAYN*DW(); }
 let ROWS=[];
 function render(){
   DW_val = state.dw;
+  ensureStatus();
   ROWS = buildRows();
   renderHeader();
   renderSidebar();
@@ -811,16 +866,19 @@ function renderSidebar(){
       const collapsed=!!state.collapsed[r.g.id];
       const cnt=r.tasks.length;
       el.className="rowlab group"+(collapsed?" collapsed":"");
+      const doneN=r.tasks.filter(x=>statusOf(x)==="done").length;
+      const odN=r.tasks.filter(x=>isOverdue(x)).length;
       el.innerHTML=`<span class="gtoggle">▼</span><span class="gicon">${r.g.icon}</span>
-        <span class="txt">${r.g.name}</span><span class="gbadge">${cnt}</span>`;
+        <span class="txt">${r.g.name}</span>${odN?`<span class="gbadge" style="background:#3a1520;color:#ff9d9d">⚠${odN}</span>`:''}<span class="gbadge">${doneN}/${cnt}</span>`;
       el.title=r.g.desc;
       el.onclick=()=>{ state.collapsed[r.g.id]=!state.collapsed[r.g.id]; render(); };
     }else{
       const t=r.t;
       const dim = !matchQOnly(t) || !passFilter(t);
+      const st=statusOf(t), od=isOverdue(t);
       el.className="rowlab task"+(selId===t.id?" sel":"");
       el.style.opacity = dim? .32 : 1;
-      el.innerHTML=`<span class="obar" style="background:${orgColor(t.org)}"></span>
+      el.innerHTML=`<span class="sdot${od?' od':''}" title="${od?'지연':STATUS[st].name}" style="background:${od?'#ef4444':STATUS[st].color}"></span><span class="obar" style="background:${orgColor(t.org)}"></span>
         ${t.m?'<span class="mstar">◆</span>':''}
         <span class="txt" title="${esc(t.name)}">${esc(t.name)}</span>`;
       el.onclick=()=> openDrawer(t.id);
@@ -868,11 +926,13 @@ function renderGrid(){
     b.style.height=totalH+"px"; b.style.background=p.color;
     tbody.appendChild(b);
   });
-  // current week band
-  const curW=Math.floor(di(TODAY)/7);
-  const cw=document.createElement("div");
-  cw.className="curweek"; cw.style.left=(curW*7*DW())+"px"; cw.style.width=(7*DW())+"px"; cw.style.height=totalH+"px";
-  tbody.appendChild(cw);
+  // current week band (오늘이 계획 범위 내일 때만)
+  if(di(TODAY)>=0 && di(TODAY)<DAYN){
+    const curW=Math.floor(di(TODAY)/7);
+    const cw=document.createElement("div");
+    cw.className="curweek"; cw.style.left=(curW*7*DW())+"px"; cw.style.width=(7*DW())+"px"; cw.style.height=totalH+"px";
+    tbody.appendChild(cw);
+  }
 
   // weekend columns + week separators
   for(let d=0;d<DAYN;d++){
@@ -939,7 +999,7 @@ function renderBar(t,idx){
   const c=barColor(t);
   const top=idx*RH+(RH-BARH)/2;
   if(t.m){
-    el.className="bar milestone"+(selId===t.id?" sel":"")+(dim?" filtered":"")+((state.showCP&&cpSet.has(t.id))?" cp":"");
+    el.className="bar milestone st-"+statusOf(t)+(selId===t.id?" sel":"")+(dim?" filtered":"")+((state.showCP&&cpSet.has(t.id))?" cp":"");
     el.style.left=(x+DW()/2)+"px";
     el.style.top=(idx*RH+(RH-16)/2)+"px";
     el.style.setProperty("--c",c);
@@ -953,14 +1013,15 @@ function renderBar(t,idx){
     return;
   }
   const isCP=state.showCP&&cpSet.has(t.id);
-  el.className="bar"+(selId===t.id?" sel":"")+(dim?" filtered":"")+(isCP?" cp":"");
+  const st=statusOf(t), od=isOverdue(t), pct=Math.round(STATUS[st].pct*100);
+  el.className="bar st-"+st+(od?" overdue":"")+(selId===t.id?" sel":"")+(dim?" filtered":"")+(isCP?" cp":"");
   el.style.left=x+"px"; el.style.width=w+"px"; el.style.top=top+"px";
   el.style.background=`linear-gradient(180deg, ${lighten(c,18)}, ${c})`;
   el.style.color=idealText(c);
   el.dataset.id=t.id;
   const oc=orgColor(t.org), oshort=esc((ORGS[t.org]||{}).short||t.org);
-  el.title=`${t.name}\n[${(ORGS[t.org]||{}).name||t.org} · ${(NATURES[t.nat]||{}).name||t.nat}] ${t.d}~${t.e} (${durDays(t)}일)`+(t.note?`\n\n${t.note}`:"");
-  el.innerHTML=`<span class="h l"></span><span class="borg"><i style="background:${oc}"></i>${oshort}</span><span class="blabel">${esc(t.name)}</span><span class="h r"></span><span class="cnode" title="여기서 드래그하여 연결"></span>${isCP?'<span class="cpbadge">임계</span>':''}`;
+  el.title=`${t.name}\n[${(ORGS[t.org]||{}).name||t.org} · ${(NATURES[t.nat]||{}).name||t.nat}] ${t.d}~${t.e} (${durDays(t)}일) · ${STATUS[st].name}${od?" · ⚠지연":""}`+(t.note?`\n\n${t.note}`:"");
+  el.innerHTML=`<span class="pbar" style="width:${pct}%"></span><span class="h l"></span><span class="borg"><i style="background:${oc}"></i>${oshort}</span><span class="blabel">${esc(t.name)}</span>${st==="done"?'<span class="bdone">✓</span>':(od?'<span class="bwarn">⚠</span>':'')}<span class="h r"></span><span class="cnode" title="여기서 드래그하여 연결"></span>${isCP?'<span class="cpbadge">임계</span>':''}`;
   el.onclick=(e)=>{ if(!el._moved){ e.stopPropagation(); onBarClick(t.id); } };
   makeDraggable(el,t,false);
   tbody.appendChild(el);
@@ -1174,6 +1235,7 @@ function fillDrawer(t){
   const gsel=$("fGroup"); gsel.innerHTML=GROUPS.map(g=>`<option value="${g.id}" ${g.id===t.g?"selected":""}>${g.icon} ${g.name}</option>`).join("");
   const osel=$("fOrg"); osel.innerHTML=Object.entries(ORGS).map(([k,v])=>`<option value="${k}" ${k===t.org?"selected":""}>${v.name}</option>`).join("");
   const nsel=$("fNat"); nsel.innerHTML=Object.entries(NATURES).map(([k,v])=>`<option value="${k}" ${k===t.nat?"selected":""}>${v.name}</option>`).join("");
+  const ssel=$("fStat"); ssel.innerHTML=Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${k===statusOf(t)?"selected":""}>${v.name}</option>`).join("");
   $("fMile").checked=!!t.m;
   $("fNote").value=t.note||"";
   // deps
@@ -1200,7 +1262,7 @@ $("dwSave").onclick=()=>{
   if(s) t.d=s; if(e) t.e=e;
   if(di(t.e)<di(t.d)) t.e=t.d;
   t.g=$("fGroup").value; t.org=$("fOrg").value; t.nat=$("fNat").value;
-  t.m=$("fMile").checked; t.note=$("fNote").value;
+  t.s=$("fStat").value; t.m=$("fMile").checked; t.note=$("fNote").value;
   render(); toast("저장됨 ✓");
 };
 $("dwDelete").onclick=()=>{
@@ -1245,6 +1307,17 @@ $("syncPill").title="실시간 공유 상태 (Supabase)";
 
 /* filter chips */
 function buildFilterChips(){
+  const sf=$("statFilters"); if(sf){ sf.innerHTML="";
+    const opts=[["todo","예정","#94a3b8"],["doing","진행중","#38bdf8"],["done","완료","#22c55e"],["overdue","지연","#ef4444"]];
+    opts.forEach(([k,nm,col])=>{
+      const c=document.createElement("span");
+      const on=!state.filterStat.length||state.filterStat.includes(k);
+      c.className="chip"+(on?"":" off");
+      c.innerHTML=`<span class="dot" style="background:${col}"></span>${nm}`;
+      c.onclick=()=>toggleFilter("filterStat",k);
+      sf.appendChild(c);
+    });
+  }
   const of=$("orgFilters"); of.innerHTML="";
   Object.entries(ORGS).forEach(([k,v])=>{
     const c=document.createElement("span");
@@ -1275,10 +1348,21 @@ function toggleFilter(key,val){
    통계 & 카운트다운
    ============================================================ */
 function renderStats(){
-  $("stBars").textContent=state.tasks.length;
-  let deps=0; state.tasks.forEach(t=>deps+=(t.dep||[]).length);
+  const N=state.tasks.length;
+  $("stBars").textContent=N;
+  let deps=0, doneN=0, odN=0, wSum=0, wDone=0;
+  state.tasks.forEach(t=>{
+    deps+=(t.dep||[]).length;
+    const st=statusOf(t); if(st==="done") doneN++;
+    if(isOverdue(t)) odN++;
+    const w=Math.max(durDays(t),1); wSum+=w; wDone+=w*STATUS[st].pct;   // 기간 가중 진행률
+  });
+  const pct = wSum? Math.round(wDone/wSum*100) : 0;
+  $("stDone").textContent=doneN;
+  $("stPct").textContent=pct+"%";
+  const dl=$("stDelay"); dl.textContent=odN; $("stpDelay").dataset.n=odN;
   $("stDeps").textContent=deps;
-  $("stGroups").textContent=GROUPS.length;
+  const pf=$("progFill"); if(pf) pf.style.width=pct+"%";
   const dd=Math.round((pd(LAUNCH)-pd(TODAY))/MS);
   $("cdDays").textContent = dd>0? "D-"+dd : (dd===0?"D-DAY":"D+"+(-dd));
 }
@@ -1287,11 +1371,12 @@ function renderStats(){
    (1) 엑셀용 표 다운로드 (CSV, 전체 과업)
    ============================================================ */
 $("btnExcel").onclick=()=>{
-  const cols=["부문","과업","담당조직","업무성격","시작일","종료일","기간(일)","마일스톤","선행과업","메모"];
+  const cols=["부문","과업","담당조직","업무성격","진행상태","시작일","종료일","기간(일)","마일스톤","선행과업","메모"];
   const rows=[cols];
   GROUPS.forEach(g=>{
     state.tasks.filter(t=>t.g===g.id).sort((a,b)=>di(a.d)-di(b.d)).forEach(t=>{
       rows.push([ g.name, t.name, (ORGS[t.org]||{}).name||t.org, (NATURES[t.nat]||{}).name||t.nat,
+        (isOverdue(t)?"지연":STATUS[statusOf(t)].name),
         t.d, t.e, durDays(t), t.m?"★":"",
         (t.dep||[]).map(id=>{const p=taskById(id);return p?p.name:id;}).join(" / "),
         (t.note||"").replace(/\s+/g," ").trim() ]);
@@ -1494,6 +1579,7 @@ function toast(msg){
    ============================================================ */
 let DW_val=state.dw;
 function init(){
+  TODAY=fmt(new Date());   // 실제 오늘로 갱신(오늘 마커·지연 판정 동적)
   RH=cssnum("--rh"); HEADERH=cssnum("--headerh"); BARH=cssnum("--barh"); LABELW=cssnum("--labelw");
   $("zoom").value=state.dw;
   $("colorOrg").classList.toggle("active",state.colorMode==="org");
