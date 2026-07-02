@@ -1310,6 +1310,11 @@ function buildWorkplanSummary(){
   return s;
 }
 function getGemKey(){ return localStorage.getItem(GEMINI.keyLS)||""; }
+async function fetchRemoteGemKey(){   // 팀 공유 키(Supabase, 링크 게이트) — 개별 키 없을 때 폴백
+  if(!sb) return "";
+  try{ const {data}=await sb.from(SYNC.table).select("data").eq("id","app-config").maybeSingle(); return (data&&data.data&&data.data.gemini_key)||""; }
+  catch(e){ return ""; }
+}
 function promptGeminiKey(){
   $("pptOverlay").classList.add("show");
   $("pptWrap").innerHTML=`<div style="padding:26px;color:#111">
@@ -1323,7 +1328,8 @@ function promptGeminiKey(){
   $("gemKeyInput").onkeydown=(e)=>{ if(e.key==="Enter") $("gemKeySave").click(); };
 }
 async function generateReport(){
-  const key=getGemKey();
+  let key=getGemKey();
+  if(!key) key=await fetchRemoteGemKey();
   if(!key){ promptGeminiKey(); return; }
   $("pptOverlay").classList.add("show");
   $("pptWrap").innerHTML=`<div style="padding:48px;text-align:center;color:#444">
