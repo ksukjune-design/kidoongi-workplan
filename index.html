@@ -264,7 +264,6 @@
     <button class="btn sm" id="btnCP">🎯 임계경로</button>
     <button class="btn sm" id="btnConnect">🔗 연결 모드</button>
     <button class="btn sm" id="btnAdd">＋ 과업 추가</button>
-    <button class="btn sm" id="btnGh">🔗 GitHub 연결</button>
     <button class="btn sm primary" id="btnExport">📄 1P 요약표</button>
     <button class="btn sm warn" id="btnReset">↺ 초기화</button>
     <button class="btn sm" id="btnHelp">? 도움말</button>
@@ -355,34 +354,6 @@
   </div>
 </div>
 
-<!-- GitHub 연결 modal -->
-<div class="overlay" id="ghOverlay">
-  <div class="modal" style="max-width:580px;">
-    <div class="mhead"><h3>🔗 GitHub 공유 연결</h3><div class="spacer"></div><button class="btn sm" id="ghClose">닫기</button></div>
-    <div class="mbody">
-      <div class="help">
-        <p>이 워크플랜은 GitHub 저장소의 <code>data.json</code> 하나를 <b>모두가 공유</b>합니다.
-        링크만 있으면 <b>누구나 최신 내용을 보고</b>, <b>편집 토큰</b>을 입력한 사람은 수정이 자동 저장되어 함께 이어서 작업됩니다.</p>
-        <p class="metaline" id="ghInfo"></p>
-      </div>
-      <div class="fld">
-        <label>편집 토큰 (GitHub Personal Access Token · repo 권한)</label>
-        <input id="ghToken" type="password" placeholder="ghp_… (이 브라우저에만 저장)">
-      </div>
-      <div class="help">
-        🔒 토큰은 <b>이 브라우저에만</b> 저장되며 저장소/파일에는 절대 올라가지 않습니다.<br>
-        발급: GitHub → Settings → Developer settings → Personal access tokens → <b>repo</b> 권한.
-        저장소(<b id="ghRepoName"></b>) 쓰기 권한이 있는 계정이어야 저장됩니다. 없으면 소유자에게 협업자(collaborator) 초대를 요청하세요.
-      </div>
-    </div>
-    <div class="mfoot">
-      <button class="btn warn" id="ghDisconnect">연결 해제</button>
-      <div class="spacer"></div>
-      <button class="btn primary" id="ghSave">저장 후 연결</button>
-    </div>
-  </div>
-</div>
-
 <!-- Help modal -->
 <div class="overlay" id="helpOverlay">
   <div class="modal" style="max-width:640px;">
@@ -397,7 +368,7 @@
         <p><b>📂 접기</b> — 왼쪽 부문 헤더를 클릭하면 해당 부문 과업들이 하나의 요약 BAR로 뭉쳐집니다.</p>
         <p><b>⚙ 필터</b> — 조직/업무성격 칩을 눌러 특정 그룹만 강조. 검색창으로 과업명 필터.</p>
         <p><b>💾 저장</b> — 뷰 설정(필터·접기·색상)은 각자 브라우저에 저장됩니다. <kbd>초기화</kbd>로 기본값 복원.</p>
-        <p><b>🔗 GitHub 공유(함께 이어서 작업)</b> — 데이터는 GitHub 저장소의 <code>data.json</code>을 모두가 공유합니다. 링크만 있으면 <b>최신본 열람</b> 가능, 상단 <kbd>🔗 GitHub 연결</kbd>에서 편집 토큰을 넣으면 수정이 자동 저장되어 팀원과 <b>함께 이어서 작업</b>됩니다.</p>
+        <p><b>🔗 실시간 공유(함께 이어서 작업)</b> — 데이터는 Supabase에 실시간 공유됩니다. <b>링크만 있으면 누구나</b> 열람·편집할 수 있고, 변경은 즉시 모두에게 반영됩니다(좌상단 <b>🟢 실시간 연결</b>). 별도 로그인/토큰이 필요 없습니다.</p>
         <p><b>📄 요약표</b> — 10pt 맑은 고딕 1페이지 테이블로 내보내 PPT에 붙여넣기(표 복사) 또는 PDF 인쇄.</p>
       </div>
     </div>
@@ -407,6 +378,7 @@
 <div class="connect-hint" id="connectHint">🔗 연결 모드 — <b id="connectStep">선행(먼저 하는) 과업을 클릭하세요</b></div>
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ============================================================
    키둥이 런칭 워크플랜 · 간트차트 엔진
@@ -417,15 +389,15 @@ const TODAY = "2026-07-01";
 const LAUNCH = "2026-09-01";
 const LS_KEY = "kidoongi_gantt_v2";
 
-/* ---- 공유 저장(GitHub 저장소의 data.json) 설정 ----
-   · 토큰 없이 접속 = 보기 전용(읽기)  · 앱에서 '편집 토큰' 입력 = 저장(커밋)되어 모두 공유
-   · 토큰은 절대 이 파일/저장소에 넣지 않습니다 (각자 브라우저 localStorage 에만 저장) */
+/* ---- 실시간 공유(Supabase) 설정 ----
+   링크만 있으면 모두 실시간 열람·편집. publishable 키는 클라이언트 공개용(안전).
+   최초 1회 Supabase SQL Editor에서 gantt_state 테이블 생성 필요(README 참조). */
 const SYNC = {
-  mode:   "github",
-  owner:  "ksukjune-design",
-  repo:   "kidoongi-workplan",
-  branch: "main",
-  path:   "data.json"
+  enabled: true,
+  url:     "https://ckabuiwrwdjnklpvgqya.supabase.co",
+  anonKey: "sb_publishable_kwwEdeWRG8civn62IIU0TA_1vFQkpiZ",
+  table:   "gantt_state",
+  row:     "kidoongi-main"
 };
 
 /* ---- 페이즈 (주차 기반 6단계) ---- */
@@ -617,107 +589,59 @@ function load(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)); }catch(e)
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); schedulePush(); }
 
 /* ============================================================
-   공유 엔진 (GitHub 저장소 data.json) — 공유: tasks / 개인(로컬): 뷰 설정
-   토큰 없음 = 보기 전용(읽기) · 토큰 입력 = 편집 저장(커밋)
+   실시간 공유 엔진 (Supabase) — 공유: tasks / 개인(로컬): 뷰 설정
+   링크만 있으면 모두 실시간 열람·편집 (publishable 키 내장 + RLS)
    ============================================================ */
-const GH_TOKEN_KEY="kidoongi_gh_token";
-let ghToken=localStorage.getItem(GH_TOKEN_KEY)||"";
-let applyingRemote=false, pushTimer=null, pollTimer=null, remoteSha=null, lastAppliedTs=0;
+let sb=null, applyingRemote=false, pushTimer=null;
 const clientId=(()=>{ let c=localStorage.getItem("kidoongi_client"); if(!c){ c=Math.random().toString(36).slice(2); localStorage.setItem("kidoongi_client",c); } return c; })();
-function ghConfigured(){ return SYNC && SYNC.mode==="github" && SYNC.repo && SYNC.repo.indexOf("REPO")!==0; }
+function isPlaceholder(){ return !SYNC.url || SYNC.url.indexOf("http")!==0 || !SYNC.anonKey || SYNC.anonKey.indexOf("__")===0; }
+function syncOn(){ return SYNC.enabled && sb!==null; }
 function setSyncPill(s,txt){ const p=document.getElementById("syncPill"); if(!p) return; p.textContent=txt; p.dataset.s=s; }
-function b64enc(str){ return btoa(unescape(encodeURIComponent(str))); }
-function b64dec(b64){ return decodeURIComponent(escape(atob((b64||"").replace(/\s/g,"")))); }
-function ghHeaders(){ const h={"Accept":"application/vnd.github+json"}; if(ghToken) h["Authorization"]="token "+ghToken; return h; }
-
-async function ghApiGet(){
-  const url="https://api.github.com/repos/"+SYNC.owner+"/"+SYNC.repo+"/contents/"+SYNC.path+"?ref="+SYNC.branch+"&t="+Date.now();
-  const r=await fetch(url,{headers:ghHeaders(),cache:"no-store"});
-  if(r.status===404) return {missing:true};
-  if(!r.ok) throw Object.assign(new Error("GET "+r.status),{status:r.status});
-  const j=await r.json();
-  return {sha:j.sha, data:JSON.parse(b64dec(j.content))};
-}
-async function ghRawGet(){
-  const url="https://raw.githubusercontent.com/"+SYNC.owner+"/"+SYNC.repo+"/"+SYNC.branch+"/"+SYNC.path+"?t="+Date.now();
-  const r=await fetch(url,{cache:"no-store"});
-  if(!r.ok) return {missing:true};
-  return {data:await r.json()};
-}
-async function ghPut(dataObj, sha){
-  const body={ message:"workplan update ("+clientId+") "+new Date().toISOString(), content:b64enc(JSON.stringify(dataObj,null,1)), branch:SYNC.branch };
-  if(sha) body.sha=sha;
-  const r=await fetch("https://api.github.com/repos/"+SYNC.owner+"/"+SYNC.repo+"/contents/"+SYNC.path,
-    {method:"PUT",headers:Object.assign(ghHeaders(),{"Content-Type":"application/json"}),body:JSON.stringify(body)});
-  if(!r.ok){ const e=await r.json().catch(()=>({})); throw Object.assign(new Error("PUT "+r.status),{status:r.status,detail:e}); }
-  const j=await r.json(); return j.content.sha;
-}
+function tableMissing(err){ const m=(err&&(err.message||""))+" "+(err&&err.code||""); return m.indexOf("schema cache")>=0 || m.indexOf("PGRST205")>=0 || m.indexOf("does not exist")>=0; }
 
 async function initSync(){
-  if(!ghConfigured()){ setSyncPill("local","🟡 로컬 저장"); return; }
-  updateGhUI();
-  setSyncPill("connecting","🟠 불러오는 중…");
-  await pullRemote(true);
-  clearInterval(pollTimer);
-  pollTimer=setInterval(function(){ pullRemote(false); }, ghToken?15000:90000);
-  if(ghToken) setSyncPill("live","🟢 GitHub 연결 · 편집 가능");
-  else setSyncPill("view","👁 보기 전용 · 토큰 입력 시 편집");
+  if(!SYNC.enabled || isPlaceholder()){ setSyncPill("local","🟡 로컬 저장"); return; }
+  if(!window.supabase){ setSyncPill("error","🔴 라이브러리 로드 실패(로컬)"); return; }
+  try{
+    sb=window.supabase.createClient(SYNC.url, SYNC.anonKey);
+    setSyncPill("connecting","🟠 연결 중…");
+    await pullRemote(true);
+    sb.channel("gantt-"+SYNC.row)
+      .on("postgres_changes",{event:"*",schema:"public",table:SYNC.table,filter:"id=eq."+SYNC.row},(payload)=>{
+        const d=payload.new && payload.new.data;
+        if(!d || d.by===clientId) return;
+        applyingRemote=true; state.tasks=d.tasks||state.tasks; render(); applyingRemote=false;
+        if(drawerOpenId){ const t=taskById(drawerOpenId); if(t) fillDrawer(t); }
+        toast("🔄 다른 사용자의 변경이 반영되었습니다");
+      })
+      .subscribe((st)=>{ if(st==="SUBSCRIBED"){ if(document.getElementById("syncPill").dataset.s!=="error") setSyncPill("live","🟢 실시간 연결"); }
+        else if(st==="CHANNEL_ERROR"||st==="TIMED_OUT") setSyncPill("error","🔴 실시간 연결 실패"); });
+  }catch(e){ console.warn("sync init",e); setSyncPill("error","🔴 동기화 오류(로컬)"); }
 }
 async function pullRemote(initial){
   try{
-    const res = ghToken ? await ghApiGet() : await ghRawGet();
-    if(res.missing){ if(initial && ghToken) await seedRemote(); return; }
-    if(res.sha) remoteSha=res.sha;
-    const d=res.data;
-    if(!d || !Array.isArray(d.tasks)) return;
-    if(d.by===clientId) return;                       // 내 변경은 무시
-    if(!initial && d.ts && d.ts===lastAppliedTs) return;
-    applyingRemote=true; state.tasks=d.tasks; render(); applyingRemote=false;
-    lastAppliedTs=d.ts||0;
-    if(drawerOpenId){ const t=taskById(drawerOpenId); if(t) fillDrawer(t); }
-    if(!initial) toast("🔄 다른 사용자의 변경이 반영되었습니다");
-  }catch(e){ console.warn("pull",e); if(e.status===403) setSyncPill("error","🔴 요청 한도 초과"); }
-}
-async function seedRemote(){
-  try{ remoteSha=await ghPut({tasks:state.tasks,ts:Date.now(),by:clientId}, undefined); setSyncPill("live","🟢 GitHub 연결 · 생성됨"); }
-  catch(e){ console.warn("seed",e); }
+    const {data,error}=await sb.from(SYNC.table).select("data").eq("id",SYNC.row).maybeSingle();
+    if(error){ console.warn(error); setSyncPill("error", tableMissing(error)?"🔴 테이블 미생성 — SQL 실행 필요":"🔴 읽기 오류"); return; }
+    if(data && data.data && Array.isArray(data.data.tasks)){
+      applyingRemote=true; state.tasks=data.data.tasks; if(initial) render(); applyingRemote=false;
+    }else{
+      await pushRemoteNow(); // 최초 접속자: 현재 데이터로 시드
+    }
+  }catch(e){ console.warn("pull",e); }
 }
 async function pushRemoteNow(){
-  if(!ghToken) return;
-  const dataObj={tasks:state.tasks, ts:Date.now(), by:clientId};
+  if(!syncOn()) return;
   try{
-    if(remoteSha===null){ const res=await ghApiGet(); remoteSha=res.missing?undefined:res.sha; }
-    remoteSha=await ghPut(dataObj, remoteSha); lastAppliedTs=dataObj.ts;
-    setSyncPill("live","🟢 GitHub 연결 · 저장됨");
-  }catch(e){
-    if(e.status===409){ try{ const res=await ghApiGet(); remoteSha=res.missing?undefined:res.sha; remoteSha=await ghPut(dataObj,remoteSha); lastAppliedTs=dataObj.ts; setSyncPill("live","🟢 저장됨"); return; }catch(e2){ console.warn(e2); } }
-    if(e.status===401||e.status===403) setSyncPill("error","🔴 토큰/권한 오류");
-    else setSyncPill("error","🔴 저장 오류");
-    console.warn("push",e);
-  }
+    const {error}=await sb.from(SYNC.table).upsert({ id:SYNC.row, data:{ tasks:state.tasks, ts:Date.now(), by:clientId } });
+    if(error){ console.warn(error); setSyncPill("error", tableMissing(error)?"🔴 테이블 미생성 — SQL 실행 필요":"🔴 저장 오류(권한/RLS)"); }
+    else setSyncPill("live","🟢 실시간 연결 · 저장됨");
+  }catch(e){ console.warn("push",e); setSyncPill("error","🔴 저장 오류"); }
 }
 function schedulePush(){
-  if(!ghConfigured() || !ghToken || applyingRemote) return;
+  if(!syncOn() || applyingRemote) return;
   setSyncPill("saving","🔵 저장 중…");
-  clearTimeout(pushTimer); pushTimer=setTimeout(pushRemoteNow, 900);
+  clearTimeout(pushTimer); pushTimer=setTimeout(pushRemoteNow,500);
 }
-
-/* GitHub 연결 UI */
-function updateGhUI(){
-  const info=document.getElementById("ghInfo");
-  if(info) info.textContent = ghConfigured() ? (SYNC.owner+"/"+SYNC.repo+" · "+(ghToken?"편집 토큰 연결됨(저장 가능)":"토큰 없음(보기 전용)")) : "저장소 미설정";
-  const rn=document.getElementById("ghRepoName"); if(rn) rn.textContent=SYNC.owner+"/"+SYNC.repo;
-  const inp=document.getElementById("ghToken"); if(inp) inp.value = ghToken ? "" : "";
-  if(inp) inp.placeholder = ghToken ? "연결됨 — 변경하려면 새 토큰 입력" : "ghp_… (이 브라우저에만 저장)";
-}
-function openGh(){ updateGhUI(); document.getElementById("ghOverlay").classList.add("show"); }
-function saveGh(){
-  const v=document.getElementById("ghToken").value.trim();
-  if(v){ ghToken=v; localStorage.setItem(GH_TOKEN_KEY,v); toast("GitHub 토큰 저장됨 (이 브라우저에만)"); }
-  document.getElementById("ghOverlay").classList.remove("show");
-  initSync();
-}
-function disconnectGh(){ ghToken=""; localStorage.removeItem(GH_TOKEN_KEY); document.getElementById("ghOverlay").classList.remove("show"); toast("연결 해제됨 (보기 전용)"); initSync(); }
 
 /* ============================================================
    날짜 유틸
@@ -1282,11 +1206,7 @@ $("toggleFilter").onclick=()=>{ $("filterbar").classList.toggle("show"); };
 $("btnReset").onclick=()=>{ if(confirm("모든 변경을 버리고 기본 워크플랜으로 초기화할까요?")){ localStorage.removeItem(LS_KEY); location.reload(); } };
 $("btnHelp").onclick=()=>$("helpOverlay").classList.add("show");
 $("helpClose").onclick=()=>$("helpOverlay").classList.remove("show");
-$("btnGh").onclick=openGh;
-$("ghClose").onclick=()=>$("ghOverlay").classList.remove("show");
-$("ghSave").onclick=saveGh;
-$("ghDisconnect").onclick=disconnectGh;
-$("syncPill").onclick=openGh; $("syncPill").style.cursor="pointer"; $("syncPill").title="클릭하여 GitHub 공유 연결";
+$("syncPill").title="실시간 공유 상태 (Supabase)";
 
 /* filter chips */
 function buildFilterChips(){
@@ -1382,7 +1302,7 @@ document.addEventListener("keydown",(e)=>{
   if(e.key==="Escape"){
     if(connectMode){ connectMode=false; $("btnConnect").classList.remove("active"); document.body.classList.remove("connecting"); showConnectHint(false); connectFrom=null; }
     $("drawer").classList.remove("open"); drawerOpenId=null;
-    $("pptOverlay").classList.remove("show"); $("helpOverlay").classList.remove("show"); $("ghOverlay").classList.remove("show");
+    $("pptOverlay").classList.remove("show"); $("helpOverlay").classList.remove("show");
   }
 });
 // deselect on empty click

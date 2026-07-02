@@ -15,22 +15,27 @@
 - **필터·검색·줌·색상 토글(조직/업무성격)**
 - **📄 1P 요약표**: 10pt 맑은 고딕 표 → PPT 붙여넣기/PDF 인쇄
 
-## 함께 이어서 작업하기 (GitHub 공유)
-데이터는 이 저장소의 **`data.json` 파일 하나를 모두가 공유**합니다.
-- **보기**: 링크만 있으면 누구나 최신 내용을 봅니다(토큰 불필요).
-- **편집**: 상단 **🔗 GitHub 연결**에서 개인 토큰을 넣으면, 수정이 `data.json`에 자동 저장(커밋)되어
-  다른 사람에게 공유됩니다. (약 15초마다 서로의 변경을 반영, 마지막 저장 우선)
+## 함께 이어서 작업하기 (실시간 공유 · Supabase)
+데이터는 **Supabase**에 실시간 공유됩니다. **링크만 있으면 누구나 열람·편집**할 수 있고,
+변경은 즉시 모두에게 반영됩니다(좌상단 **🟢 실시간 연결**). 별도 로그인/토큰이 필요 없습니다.
 
-### 편집 권한 얻기 (팀원)
-1. 저장소 소유자에게 **협업자(Collaborator) 초대**를 요청 (Settings → Collaborators).
-2. GitHub → Settings → Developer settings → **Personal access tokens (classic)** →
-   **`repo`** 권한으로 토큰 발급.
-3. 앱 상단 **🔗 GitHub 연결** → 토큰 붙여넣기 → *저장 후 연결*.
-   좌상단이 **🟢 GitHub 연결 · 편집 가능** 으로 바뀝니다.
-
-> 🔒 토큰은 **각자 브라우저(localStorage)에만** 저장되며, 저장소/파일에는 절대 올라가지 않습니다.
-> (토큰을 소스에 커밋하면 GitHub가 자동 폐기합니다.)
+### 최초 1회 설정 (테이블 생성)
+Supabase 대시보드 → **SQL Editor** → 아래 실행 (프로젝트: `ckabuiwrwdjnklpvgqya`):
+```sql
+create table if not exists public.gantt_state (
+  id text primary key,
+  data jsonb,
+  updated_at timestamptz default now()
+);
+alter table public.gantt_state enable row level security;
+create policy "public read"   on public.gantt_state for select using (true);
+create policy "public insert" on public.gantt_state for insert with check (true);
+create policy "public update" on public.gantt_state for update using (true) with check (true);
+alter publication supabase_realtime add table public.gantt_state;
+```
+> 연결값(`index.html`의 `SYNC`): url=`https://ckabuiwrwdjnklpvgqya.supabase.co`,
+> anonKey=publishable 키(클라이언트 공개용, 안전). 첫 접속자가 현재 데이터로 자동 시드합니다.
 
 ## 배포
 GitHub Pages(main / root)로 서비스됩니다. 과업 기본값은 `index.html`의 `DEFAULT_TASKS`,
-공유 데이터는 런타임에 `data.json`으로 관리됩니다(첫 편집 시 자동 생성).
+공유 데이터는 Supabase `gantt_state` 테이블에서 실시간 관리됩니다.
