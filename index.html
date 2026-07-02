@@ -129,6 +129,11 @@
   .bar{position:absolute;height:var(--barh);border-radius:7px;z-index:6;display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:700;color:#0c1220;white-space:nowrap;overflow:hidden;cursor:grab;user-select:none;
     box-shadow:0 2px 6px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.14);}
   .bar:hover{filter:brightness(1.07);box-shadow:0 4px 12px rgba(0,0,0,.5);z-index:8;}
+  /* 조직 배지 (BAR 내부 버튼형) */
+  .bar .borg{flex:0 0 auto;display:inline-flex;align-items:center;gap:3px;height:16px;padding:0 6px;margin-right:6px;border-radius:5px;
+    background:rgba(255,255,255,.9);color:#16203a;font-size:9.5px;font-weight:800;letter-spacing:.1px;white-space:nowrap;pointer-events:none;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.14),0 1px 1.5px rgba(0,0,0,.2);}
+  .bar .borg i{width:6px;height:6px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 1px rgba(0,0,0,.15);}
   .bar.dragging{cursor:grabbing;z-index:30;filter:brightness(1.12);box-shadow:0 8px 22px rgba(0,0,0,.6);}
   .bar.sel{outline:2px solid #fff;outline-offset:1px;z-index:9;}
   .bar .blabel{overflow:hidden;text-overflow:ellipsis;pointer-events:none;text-shadow:0 1px 1px rgba(255,255,255,.15);}
@@ -140,7 +145,9 @@
   .bar.summary .cap{position:absolute;left:-3px;width:3px;height:22px;top:-3px;background:inherit;}
   .bar.milestone{width:0!important;height:0;padding:0;background:transparent!important;border:none;box-shadow:none;overflow:visible;}
   .bar.milestone .dia{position:absolute;left:-9px;top:-1px;width:16px;height:16px;background:var(--c,#ff5d8f);transform:rotate(45deg);border:1.5px solid #fff;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,.5);}
-  .bar.milestone .mlab{position:absolute;left:12px;top:-1px;font-size:10.5px;font-weight:800;color:var(--text);white-space:nowrap;text-shadow:0 1px 3px #000;background:rgba(16,22,35,.6);padding:1px 5px;border-radius:4px;}
+  .bar.milestone .mlab{position:absolute;left:12px;top:-2px;display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;color:var(--text);white-space:nowrap;text-shadow:0 1px 3px #000;background:rgba(16,22,35,.72);padding:2px 6px;border-radius:5px;}
+  .bar.milestone .mlorg{display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,.9);color:#16203a;font-size:9px;font-weight:800;padding:0 5px;height:14px;border-radius:4px;text-shadow:none;}
+  .bar.milestone .mlorg i{width:6px;height:6px;border-radius:50%;}
   .bar.milestone.sel .dia{outline:2px solid var(--accent);outline-offset:2px;}
   .bar.filtered{opacity:.14;filter:grayscale(.7);}
   /* critical path */
@@ -896,7 +903,9 @@ function renderBar(t,idx){
     el.style.left=(x+DW()/2)+"px";
     el.style.top=(idx*RH+(RH-16)/2)+"px";
     el.style.setProperty("--c",c);
-    el.innerHTML=`<div class="dia"></div><div class="mlab">${esc(shortName(t.name))}</div>`;
+    const moc=orgColor(t.org), moshort=esc((ORGS[t.org]||{}).short||t.org);
+    el.innerHTML=`<div class="dia"></div><div class="mlab"><span class="mlorg"><i style="background:${moc}"></i>${moshort}</span>${esc(shortName(t.name))}</div>`;
+    el.title=`◆ ${t.name}\n[${(ORGS[t.org]||{}).name||t.org}] ${t.d} (마일스톤)`;
     el.dataset.id=t.id;
     el.onclick=(e)=>{ e.stopPropagation(); onBarClick(t.id); };
     makeDraggable(el,t,true);
@@ -907,8 +916,11 @@ function renderBar(t,idx){
   el.className="bar"+(selId===t.id?" sel":"")+(dim?" filtered":"")+(isCP?" cp":"");
   el.style.left=x+"px"; el.style.width=w+"px"; el.style.top=top+"px";
   el.style.background=`linear-gradient(180deg, ${lighten(c,18)}, ${c})`;
+  el.style.color=idealText(c);
   el.dataset.id=t.id;
-  el.innerHTML=`<span class="h l"></span><span class="blabel">${esc(t.name)}</span><span class="h r"></span><span class="cnode" title="여기서 드래그하여 연결"></span>${isCP?'<span class="cpbadge">임계</span>':''}`;
+  const oc=orgColor(t.org), oshort=esc((ORGS[t.org]||{}).short||t.org);
+  el.title=`${t.name}\n[${(ORGS[t.org]||{}).name||t.org} · ${(NATURES[t.nat]||{}).name||t.nat}] ${t.d}~${t.e} (${durDays(t)}일)`+(t.note?`\n\n${t.note}`:"");
+  el.innerHTML=`<span class="h l"></span><span class="borg"><i style="background:${oc}"></i>${oshort}</span><span class="blabel">${esc(t.name)}</span><span class="h r"></span><span class="cnode" title="여기서 드래그하여 연결"></span>${isCP?'<span class="cpbadge">임계</span>':''}`;
   el.onclick=(e)=>{ if(!el._moved){ e.stopPropagation(); onBarClick(t.id); } };
   makeDraggable(el,t,false);
   tbody.appendChild(el);
@@ -937,6 +949,13 @@ function lighten(hex,p){
   const n=parseInt(hex.slice(1),16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
   r=Math.min(255,r+Math.round(255*p/100)); g=Math.min(255,g+Math.round(255*p/100)); b=Math.min(255,b+Math.round(255*p/100));
   return `rgb(${r},${g},${b})`;
+}
+// 배경색 명암에 따라 가독성 높은 글자색(검정/흰색) 자동 선택
+function idealText(hex){
+  const n=parseInt(hex.slice(1),16); const r=(n>>16&255)/255,g=(n>>8&255)/255,b=(n&255)/255;
+  const f=v=>v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);
+  const L=0.2126*f(r)+0.7152*f(g)+0.0722*f(b);
+  return L>0.32 ? "#0c1220" : "#f4f8ff";
 }
 
 /* ---------- Dependency arrows ---------- */
