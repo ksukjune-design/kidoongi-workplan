@@ -350,8 +350,11 @@
       <button class="btn sm" id="colorNat">업무성격별</button>
     </div>
     <div class="tgroup">
-      <button class="btn sm" id="expandAll">▼ 모두 펼치기</button>
-      <button class="btn sm" id="collapseAll">▶ 모두 접기</button>
+      <span class="tlab">상세도</span>
+      <button class="btn sm" id="lv0" title="모든 과업 표시">전체</button>
+      <button class="btn sm" id="lv1" title="마일스톤·임계경로·장기 과업만">주요</button>
+      <button class="btn sm" id="lv2" title="마일스톤·임계경로만">핵심</button>
+      <button class="btn sm" id="lv3" title="부문별 요약 바로 접기">요약</button>
     </div>
     <div class="tgroup zoom">
       <span class="tlab">줌</span>
@@ -473,7 +476,7 @@
         <p><b>✅ 진행 상태</b> — BAR를 클릭해 <b>예정/진행중/완료</b>를 설정하면, 바 하단 진행선·완료(✓)·상태점이 표시됩니다. 종료일이 지났는데 미완료면 <b>지연(⚠·빨강 테두리)</b>으로 자동 표시. 상단에 <b>완료율·지연 수</b>와 전체 <b>진행바</b>가 집계되고, 필터의 <b>진행</b> 칩으로 상태별로 볼 수 있습니다. 노란 "오늘" 선은 실제 오늘 날짜로 움직입니다.</p>
         <p><b>🎯 임계경로</b> — 버튼을 켜면 <b>9/1 런칭을 결정하는 과업 체인</b>(가장 긴 선행 경로)이 분홍색으로 강조됩니다. 이 경로가 지연되면 런칭일이 밀립니다.</p>
         <p><b>🗂 페이즈</b> — 상단 밴드는 6단계(킥오프·발굴 → 설계·확정 → 구축·개발 → 통합·연동 → QA·안정화 → 런칭·운영). 노란 점선 밴드는 <b>이번 주(7/1)</b>.</p>
-        <p><b>📂 접기</b> — 왼쪽 부문 헤더를 클릭하면 해당 부문 과업들이 하나의 요약 BAR로 뭉쳐집니다.</p>
+        <p><b>🔎 상세도(4단계)</b> — <kbd>전체</kbd>(모든 과업) → <kbd>주요</kbd>(마일스톤·임계경로·장기 과업만) → <kbd>핵심</kbd>(마일스톤·임계경로만) → <kbd>요약</kbd>(부문별 1개 요약 BAR). 왼쪽 부문 헤더를 클릭하면 개별 부문도 접고 펼 수 있습니다.</p>
         <p><b>⚙ 필터</b> — 조직/업무성격 칩을 눌러 특정 그룹만 강조. 검색창으로 과업명 필터.</p>
         <p><b>💾 저장</b> — 뷰 설정(필터·접기·색상)은 각자 브라우저에 저장됩니다. <kbd>초기화</kbd>로 기본값 복원.</p>
         <p><b>🔗 실시간 공유(함께 이어서 작업)</b> — 데이터는 Supabase에 실시간 공유됩니다. <b>링크만 있으면 누구나</b> 열람·편집할 수 있고, 변경은 즉시 모두에게 반영됩니다(좌상단 <b>🟢 실시간 연결</b>). 별도 로그인/토큰이 필요 없습니다.</p>
@@ -601,7 +604,7 @@ const DEFAULT_TASKS = [
  {id:"t105", g:"G1", org:"AITF", nat:"plan", name:"주간 진행점검 · 워크플랜 운영 (전 기간)", d:"2026-06-29", e:"2026-09-06", dep:["t102"], note:"매주 진행상황 모니터링·리스크 관리. 사업부문 상시 과업."},
  {id:"t106", g:"G1", org:"AITF", nat:"plan", name:"게이트#1 개발 착수 승인", d:"2026-07-17", e:"2026-07-17", m:true, dep:["t205","t503","t703"], note:"기획·인프라설계·연동범위 확정 후 본개발 GO."},
  {id:"t107", g:"G1", org:"AITF", nat:"plan", name:"게이트#2 기능 동결(코드 프리즈) 결정", d:"2026-08-21", e:"2026-08-21", m:true, dep:["t608"], note:"신규 기능 마감, 이후 안정화·버그픽스만."},
- {id:"t108", g:"G1", org:"AITF", nat:"plan", name:"런칭 최종 승인 (Go / No-Go)", d:"2026-08-28", e:"2026-08-28", m:true, dep:["t1105"], note:"UAT·부하·품질 결과 종합 판단."},
+ {id:"t108", g:"G1", org:"AITF", nat:"plan", name:"런칭 최종 승인 (Go / No-Go)", d:"2026-08-28", e:"2026-08-28", m:true, dep:["t1105","t136"], note:"UAT·부하·품질·경영진 품질확인#3 결과 종합 판단."},
  {id:"t109", g:"G1", org:"AITF", nat:"plan", name:"★ 키둥이 정식 런칭", d:"2026-09-01", e:"2026-09-01", m:true, dep:["t1108"], note:"키디키디 APP 업데이트 배포 · 키둥이 서비스 오픈."},
 
  // G2 기획 · 화면설계
@@ -687,12 +690,17 @@ const DEFAULT_TASKS = [
  {id:"t908", g:"G9", org:"IMC", nat:"ops_mkt", name:"런칭 프로모션 최종 세팅", d:"2026-08-24", e:"2026-08-30", dep:["t905","t906"], note:"오픈 시점 노출·이벤트 최종 점검."},
 
  // G10 상품운영 · 고객조사
- {id:"t1001", g:"G10", org:"MD", nat:"ops_feedback", name:"1차 고객조사 설계·진행 (차주 월요~)", d:"2026-06-29", e:"2026-07-06", dep:["t101"], note:"엔드유저 사전 고객조사·의견 수렴."},
- {id:"t1002", g:"G10", org:"MD", nat:"ops_feedback", name:"고객조사 결과 분석·요구 반영", d:"2026-07-06", e:"2026-07-10", dep:["t1001"], note:"조사 결과 → 요구사항/로직 반영."},
+ {id:"t1001", g:"G10", org:"MD", nat:"ops_feedback", name:"사전 고객 니즈·수용도 조사 (Pre-FGI)", d:"2026-06-29", e:"2026-07-06", dep:["t101"], note:"엔드유저 사전 니즈·수용도 조사. 요구사항/로직 초기 반영."},
+ {id:"t1002", g:"G10", org:"MD", nat:"ops_feedback", name:"사전 조사 결과 분석·요구 반영", d:"2026-07-06", e:"2026-07-10", dep:["t1001"], note:"조사 결과 → 요구사항/로직 반영."},
  {id:"t1003", g:"G10", org:"MD", nat:"ops_mkt", name:"입점사 정책·기대효용 협의", d:"2026-07-13", e:"2026-07-22", dep:["t1002"], note:"입점사 효용·이해관계 정리."},
  {id:"t1004", g:"G10", org:"MD", nat:"ops_mkt", name:"상품 운영·노출 상품 큐레이션 정책", d:"2026-07-22", e:"2026-07-31", dep:["t1003"], note:"노출 상품군·운영 정책."},
- {id:"t1005", g:"G10", org:"MD", nat:"ops_feedback", name:"2차 고객조사 (프로토타입 사용성)", d:"2026-08-10", e:"2026-08-17", dep:["t608"], note:"통합 빌드 대상 사용성 테스트."},
- {id:"t1006", g:"G10", org:"MD", nat:"ops_feedback", name:"사용성 피드백 반영 우선순위", d:"2026-08-17", e:"2026-08-21", dep:["t1005"], note:"피드백 → 수정 우선순위 결정."},
+ // 3차에 걸친 FGI 고객조사 (경영진 품질확인 시점과 연동)
+ {id:"t140", g:"G10", org:"MD", nat:"ops_feedback", name:"1차 FGI (Alpha) — 누락기능·대화 어색 포인트 발굴", d:"2026-07-31", e:"2026-08-05", dep:["t130"], note:"[시점#1] 코드스텝 개발서버 Alpha URL로 사용자 FGI. 고객관점 필수인데 누락된 기능 + 대화 과정 어색한 핵심 로직 수정사항 도출."},
+ {id:"t141", g:"G10", org:"MD", nat:"ops_feedback", name:"1차 FGI 결과 분석·핵심 로직 수정과제 우선순위", d:"2026-08-05", e:"2026-08-08", dep:["t140"], note:"수정과제 우선순위화 → 개발 반영(t132)로 전달."},
+ {id:"t142", g:"G10", org:"MD", nat:"ops_feedback", name:"2차 FGI (키디 임베드 Beta) — 고객여정 어색함·크리티컬 발굴", d:"2026-08-14", e:"2026-08-18", dep:["t133"], note:"[시점#2] 키디키디 내 얹힌 상태에서 고객여정 어색함·배포 전 반드시 해결할 크리티컬 포인트 발굴."},
+ {id:"t143", g:"G10", org:"MD", nat:"ops_feedback", name:"2차 FGI 결과: 즉시수정 vs 향후과제 분류 (스토어 심사 前)", d:"2026-08-18", e:"2026-08-21", dep:["t142"], note:"단기 해결 가능 크리티컬 → 즉시수정, 나머지 → 향후과제. 스토어 심사·버그픽스로 전달."},
+ {id:"t144", g:"G10", org:"MD", nat:"ops_feedback", name:"3차 FGI (최종 V1) — 운영/CS/IMC/MD 커뮤니케이션·향후과제", d:"2026-08-24", e:"2026-08-27", dep:["t1104"], note:"[시점#3] 배포 직전 최종 V1 조사. 입점사·인바운드 고객·광고 잠재고객 관점 종합, 운영 아이디어 취합, 제한요건(미해결 개발건) 우선순위."},
+ {id:"t145", g:"G10", org:"MD", nat:"ops_mkt", name:"운영 시나리오·향후과제 로드맵 정리 (MD·IMC·CS)", d:"2026-08-28", e:"2026-09-01", dep:["t144"], note:"3차 FGI 기반 운영/커뮤니케이션 시나리오·향후 개발 로드맵 확정."},
 
  // G11 QA · 런칭 · 운영
  {id:"t1101", g:"G11", org:"CODESTEP", nat:"ops_feedback", name:"통합 테스트 계획·시나리오", d:"2026-07-27", e:"2026-08-03", dep:["t205"], note:"테스트 케이스·회귀 시나리오."},
@@ -700,7 +708,7 @@ const DEFAULT_TASKS = [
  {id:"t1103", g:"G11", org:"INFRA", nat:"ops_feedback", name:"부하 테스트 (인바운드 30% 부하)", d:"2026-08-17", e:"2026-08-23", dep:["t509","t608"], note:"피크 트래픽 대응·오토스케일 검증."},
  {id:"t1104", g:"G11", org:"CODESTEP", nat:"ops_feedback", name:"스테이징 배포 · 사내 베타", d:"2026-08-19", e:"2026-08-24", dep:["t1102"], note:"스테이징 오픈·내부 베타 사용."},
  {id:"t1105", g:"G11", org:"AITF", nat:"ops_feedback", name:"UAT (사업부문 검수)", d:"2026-08-24", e:"2026-08-28", dep:["t1104","t708"], note:"서비스 품질 최종 검수(클라이언트)."},
- {id:"t1106", g:"G11", org:"CODESTEP", nat:"ops_feedback", name:"버그 픽스 · 안정화", d:"2026-08-24", e:"2026-08-30", dep:["t1104","t107"], note:"베타·UAT 결함 수정."},
+ {id:"t1106", g:"G11", org:"CODESTEP", nat:"ops_feedback", name:"버그 픽스 · 안정화", d:"2026-08-24", e:"2026-08-30", dep:["t1104","t107","t143"], note:"베타·UAT·2차 FGI 크리티컬 결함 수정."},
  {id:"t1107", g:"G11", org:"INFRA", nat:"ops_feedback", name:"릴리즈 리허설 · 롤백 계획", d:"2026-08-28", e:"2026-08-30", dep:["t1105"], note:"배포 순서·롤백 시나리오 점검."},
  {id:"t1108", g:"G11", org:"CODESTEP", nat:"build_attach", name:"프로덕션 배포 (키디 APP 업데이트)", d:"2026-08-31", e:"2026-09-01", dep:["t1107","t108","t1106","t120"], note:"키디키디 APP 업데이트에 키둥이 포함 배포. 스토어 승인(t120) 완료 전제."},
  {id:"t1109", g:"G11", org:"AITF", nat:"ops_feedback", name:"정식 런칭 & 초기 모니터링", d:"2026-09-01", e:"2026-09-03", dep:["t1108","t109"], note:"오픈 직후 지표·오류 실시간 모니터링."},
@@ -717,7 +725,14 @@ const DEFAULT_TASKS = [
  {id:"t124", g:"G5", org:"INFRA", nat:"ops_feedback", name:"모니터링·장애 알림(대시보드) 셋업", d:"2026-08-12", e:"2026-08-21", dep:["t507"], note:"오류율·응답속도·트래픽 대시보드 및 장애 알림(임계치) 구성. 런칭 안정 운영 대비."},
  {id:"t122", g:"G3", org:"DATA", nat:"ops_feedback", name:"런칭 지표·퍼널 이벤트 계측 설계 (GA4)", d:"2026-07-27", e:"2026-08-07", dep:["t205"], note:"키둥이 진입·질의·추천클릭·상품랜딩·전환 퍼널 이벤트 태깅 설계. 런칭 효과 측정 기준."},
  {id:"t123", g:"G10", org:"MD", nat:"ops_mkt", name:"CS·운영 매뉴얼·FAQ 준비", d:"2026-08-12", e:"2026-08-25", dep:["t608"], note:"신규 서비스 문의 대응 스크립트·FAQ·오답/불만 에스컬레이션 절차. 런칭 CS 대비."},
- {id:"t120", g:"G11", org:"PLAT_ARCH", nat:"build_attach", name:"앱스토어 심사 제출·승인 (iOS/Android)", d:"2026-08-25", e:"2026-08-31", dep:["t708","t1104"], note:"키둥이 임베드 포함 키디 APP 업데이트 빌드 스토어 제출→심사→승인. 심사 리드타임(iOS 1~3일) 고려, 9/1 배포 전 승인 필수. ★임계경로."},
+ {id:"t120", g:"G11", org:"PLAT_ARCH", nat:"build_attach", name:"앱스토어 심사 제출·승인 (iOS/Android)", d:"2026-08-25", e:"2026-08-31", dep:["t708","t1104","t143"], note:"키둥이 임베드 포함 키디 APP 업데이트 빌드 스토어 제출→심사→승인. 심사 리드타임(iOS 1~3일) 고려, 9/1 배포 전 승인 필수. ★임계경로. 2차 FGI 크리티컬 반영 후 제출."},
+
+ // ★ 경영진(투자자) 품질확인 3회 + 연동 개발
+ {id:"t131", g:"G6", org:"CODESTEP", nat:"build_make", name:"핵심기능 구동본(Alpha) 통합 — 코드스텝 개발서버", d:"2026-07-23", e:"2026-07-31", dep:["t603","t604","t605","t606"], note:"'만드는 것' 1차 완료: 핵심 DB 적재 + 로직 스크립트가 코드스텝 별도 개발서버에서 구동 + 테스트버전 프론트 디자인. 서버 URL 공유 가능 상태."},
+ {id:"t130", g:"G1", org:"AITF", nat:"plan", name:"★ 경영진 품질확인 #1 · Alpha (핵심기능 구동본)", d:"2026-07-31", e:"2026-07-31", m:true, dep:["t131"], note:"[시점#1·7월 마지막주] 투자자·경영진이 기본 기능구현 품질 확인. 핵심 DB·로직이 개발서버에서 구동되고 테스트 프론트까지 입혀진 데모/서버URL 공유 → 1차 FGI 착수."},
+ {id:"t132", g:"G6", org:"CODESTEP", nat:"build_make", name:"1차 FGI 개선 반영 (우선순위 상위 ~60%)", d:"2026-08-03", e:"2026-08-13", dep:["t141"], note:"1차 FGI에서 도출된 누락기능·어색 로직 수정과제 중 우선순위 상위 약 60% 개선."},
+ {id:"t133", g:"G1", org:"AITF", nat:"plan", name:"★ 경영진 품질확인 #2 · Beta (키디 임베드·디자인 완성)", d:"2026-08-14", e:"2026-08-14", m:true, dep:["t706","t132","t903","t803"], note:"[시점#2·8월 2주차] 키디키디에 얹혀 개발서버 구동, 1차 FGI 과제 ~60% 개선, 네이밍·CI·웹디자인·핵심 구성요소+백엔드 완성. 디자인 관점 사실상 완성된 Beta 확인 → 2차 FGI 착수."},
+ {id:"t136", g:"G1", org:"AITF", nat:"plan", name:"★ 경영진 품질확인 #3 · 최종 V1 (배포 직전)", d:"2026-08-28", e:"2026-08-28", m:true, dep:["t144","t1105"], note:"[시점#3·8월 마지막주] 배포 직전 최종 V1. 크리티컬 포인트 모두 개선, 향후 개발사양 포함. 3차 FGI(운영·CS·IMC·MD 관점) 종합 → Go/No-Go 근거."},
 ];
 
 /* ============================================================
@@ -732,9 +747,11 @@ let state = load() || {
   filterNat: [],
   filterStat: [],
   q: "",
-  showCP: false
+  showCP: false,
+  detail: 0
 };
 if(!state.filterStat) state.filterStat=[];
+if(state.detail===undefined) state.detail=0;
 function load(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)); }catch(e){ return null; } }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); schedulePush(); }
 
@@ -845,15 +862,21 @@ function passFilter(t){
 // visible (not greyed) — used for filtered look; we still render all but dim non-matching
 function matchQOnly(t){ return !state.q || t.name.toLowerCase().includes(state.q.toLowerCase()); }
 
+/* 상세도(detail): 0 전체 · 1 주요 · 2 핵심 · 3 요약(부문 접기) */
+function isMajor(t){ return t.m || cpSet.has(t.id) || durDays(t)>=10; }  // 주요: 마일스톤·임계경로·장기(10일+)
+function isCore(t){ return t.m || cpSet.has(t.id); }                     // 핵심: 마일스톤·임계경로
 /* build ordered rows */
 function buildRows(){
   const rows=[];
+  const d=state.detail||0;
   GROUPS.forEach(g=>{
     const gtasks = state.tasks.filter(t=>t.g===g.id);
     rows.push({type:"group", g, tasks:gtasks});
     if(!state.collapsed[g.id]){
-      gtasks.sort((a,b)=> di(a.d)-di(b.d) || durDays(b)-durDays(a));
-      gtasks.forEach(t=> rows.push({type:"task", t, g}));
+      let vis = gtasks.slice().sort((a,b)=> di(a.d)-di(b.d) || durDays(b)-durDays(a));
+      if(d===1) vis=vis.filter(isMajor);
+      else if(d===2) vis=vis.filter(isCore);
+      vis.forEach(t=> rows.push({type:"task", t, g}));
     }
   });
   return rows;
@@ -866,6 +889,7 @@ let ROWS=[];
 function render(){
   DW_val = state.dw;
   ensureStatus();
+  computeCP();          // 상세도 필터가 임계경로를 쓰므로 buildRows 전에 계산
   ROWS = buildRows();
   renderHeader();
   renderSidebar();
@@ -964,9 +988,8 @@ function renderSidebar(){
 
 /* ---------- Grid (bg, markers, bars, deps) ---------- */
 let cpSet=new Set(), cpEdges=new Set();
-function computeCP(){
+function computeCP(){   // 항상 임계경로 계산(상세도 필터·하이라이트 공용). 하이라이트만 state.showCP로 제어.
   cpSet=new Set(); cpEdges=new Set();
-  if(!state.showCP) return;
   const byId={}; state.tasks.forEach(t=>byId[t.id]=t);
   const memo={}, choice={};
   function dist(id){
@@ -988,7 +1011,6 @@ function computeCP(){
 function renderGrid(){
   // clear except svg
   [...tbody.querySelectorAll(".rowbg,.bar,.weekendcol,.weeksep,.marker,.curweek,.phaseband")].forEach(e=>e.remove());
-  computeCP();
   tbody.classList.toggle("cpmode", state.showCP);
   const totalH = ROWS.length*RH;
   tbody.style.width=(DAYN*DW())+"px";
@@ -1370,8 +1392,17 @@ $("btnAdd").onclick=()=>{
    ============================================================ */
 $("colorOrg").onclick=()=>{ state.colorMode="org"; $("colorOrg").classList.add("active"); $("colorNat").classList.remove("active"); render(); };
 $("colorNat").onclick=()=>{ state.colorMode="nat"; $("colorNat").classList.add("active"); $("colorOrg").classList.remove("active"); render(); };
-$("expandAll").onclick=()=>{ state.collapsed={}; render(); };
-$("collapseAll").onclick=()=>{ GROUPS.forEach(g=>state.collapsed[g.id]=true); render(); };
+function updateLevelBtns(){ [0,1,2,3].forEach(i=>$("lv"+i).classList.toggle("active", (state.detail||0)===i)); }
+function setDetail(lv){
+  state.detail=lv;
+  if(lv===3){ GROUPS.forEach(g=>state.collapsed[g.id]=true); }   // 요약: 부문 접기
+  else { state.collapsed={}; }                                   // 전체/주요/핵심: 펼치고 필터
+  updateLevelBtns(); render();
+}
+$("lv0").onclick=()=>setDetail(0);
+$("lv1").onclick=()=>setDetail(1);
+$("lv2").onclick=()=>setDetail(2);
+$("lv3").onclick=()=>setDetail(3);
 $("zoom").oninput=(e)=>{ state.dw=+e.target.value; render(); };
 $("search").oninput=(e)=>{ state.q=e.target.value; render(); };
 $("toggleFilter").onclick=()=>{ $("filterbar").classList.toggle("show"); };
@@ -1470,35 +1501,48 @@ $("btnExcel").onclick=()=>{
    (2) AI 1페이지 보고서 (Gemini 호출)
    ============================================================ */
 const GEMINI={ model:"gemini-2.5-flash", keyLS:"kidoongi_gemini_key" };
-const REPORT_PROMPT=`너는 PM 보좌 AI다. 아래 '키둥이 서비스 런칭 워크플랜'(키디키디 APP Add-on LLM 큐레이팅 검색 서비스, 2026-09-01 런칭)을 경영진 보고용 **16:9 슬라이드 1장** 분량으로 압축하라.
+const REPORT_PROMPT=`너는 PM 보좌 AI다. 아래 '키둥이 서비스 런칭 워크플랜'(키디키디 APP Add-on LLM 큐레이팅 검색, 2026-09-01 런칭)을 경영진 보고용 **16:9 슬라이드 1장**으로, **핵심 마일스톤 중심**으로 압축하라.
 [규칙]
-- 개별 과업(약 95개)을 그대로 나열 금지. 부문·페이즈 단위 핵심만.
-- 슬라이드 1장에 들어가도록 매우 간결하게(개조식, 한국어, 과장 없이 사실 기반).
-- sections: 11개 이내(부문별 1행). activity(핵심활동)는 1~2개를 25자 내외로 압축. owner는 담당 조직 약칭. period는 M/D~M/D. milestone은 그 부문의 핵심 마일스톤 1개(없으면 "-").
-- overview: 1~2문장(핵심 일정: 킥오프 6/24 → 정식 런칭 9/1(화), 총 11주).
-- phase_timeline: 6단계 페이즈를 화살표(→)로 1줄.
-- milestones: 5~7개(각 항목에 날짜 포함, 예 "7/24 정식 네이밍 확정").
-- risks: 3~4개(핵심 리스크/의사결정: 예 정식 네이밍 확정, 데이터 정제·색인, 커머스플랫폼 연동범위 확정, 인바운드 30% 부하 대응).`;
+- 개별 과업을 나열하지 말 것. **핵심 마일스톤을 축으로**, 각 마일스톤이 어떤 업무영역(부문)과 세부 핵심활동으로 엮여 달성되는지를 보여줘라.
+- 반드시 아래 [핵심 마일스톤] 목록을 근거로 사용(특히 '경영진 품질확인 #1~#3'은 반드시 포함). milestones는 시간순 7~9개.
+- 각 milestone 필드:
+  · name: 마일스톤명(간결)
+  · date: 시점(M/D)
+  · meaning: 그 시점에 '무엇이 완성/결정되는지'를 **비개발자도 이해할 쉬운 한 문장**(전문용어 지양)
+  · bumun: 그 마일스톤에 관여하는 연관 부문 2~4개(쉼표로)
+  · activities: 그 마일스톤을 이루는 핵심 활동/산출물 1~2개(각 25자 내외)
+- overview: 1~2문장(킥오프 6/24 → 정식 런칭 9/1(화), 총 11주, 경영진 품질확인 3회 + 3차 FGI 고객조사).
+- phase_timeline: 6단계 페이즈 화살표(→) 1줄.
+- risks: 핵심 리스크/의사결정 3~4개(예: 정식 네이밍 확정, 데이터 정제·색인 품질, 커머스플랫폼 연동범위, 앱스토어 심사 리드타임, 인바운드 30% 부하).
+- 한국어, 과장 없이 사실 기반.`;
 const REPORT_SCHEMA={ type:"object", properties:{
   title:{type:"string"}, overview:{type:"string"},
-  sections:{type:"array", items:{type:"object", properties:{
-    bumun:{type:"string"}, activity:{type:"string"}, owner:{type:"string"}, period:{type:"string"}, milestone:{type:"string"}
-  }, required:["bumun","activity","owner","period","milestone"]}},
+  milestones:{type:"array", items:{type:"object", properties:{
+    name:{type:"string"}, date:{type:"string"}, meaning:{type:"string"}, bumun:{type:"string"}, activities:{type:"string"}
+  }, required:["name","date","meaning","bumun","activities"]}},
   phase_timeline:{type:"string"},
-  milestones:{type:"array", items:{type:"string"}},
   risks:{type:"array", items:{type:"string"}}
-}, required:["title","overview","sections","phase_timeline","milestones","risks"] };
+}, required:["title","overview","milestones","phase_timeline","risks"] };
 let lastReport=null;
 
 function buildWorkplanSummary(){
-  let s="런칭일: 2026-09-01(화), 킥오프: 2026-06-24, 기간: 2026-06-22~09-06(11주).\n";
+  let s="런칭일 2026-09-01(화), 킥오프 6/24, 총 11주. 경영진(투자자) 품질확인 3회(#1 Alpha 7/31, #2 Beta 8/14, #3 최종V1 8/28)와 3차 FGI 고객조사가 각 시점에 연동됨.\n";
   s+="6단계 페이즈: "+PHASES.map((p,i)=>"P"+(i+1)+" "+p.name+"(W"+p.w0+"~W"+p.w1+")").join(", ")+"\n\n";
+  // 핵심 마일스톤 (선행 과업 → 연관 부문·핵심활동 도출)
+  s+="[핵심 마일스톤 (시간순, 선행활동·연관부문 포함)]\n";
+  state.tasks.filter(t=>t.m).sort((a,b)=>di(a.d)-di(b.d)).forEach(m=>{
+    const deps=(m.dep||[]).map(id=>taskById(id)).filter(Boolean);
+    const bumuns=[...new Set(deps.map(t=>(GROUPS.find(g=>g.id===t.g)||{}).name).filter(Boolean))].join(", ");
+    const acts=deps.map(t=>t.name).slice(0,3).join(" / ");
+    s+="- "+m.d.slice(5)+" "+m.name+" | 연관부문: "+(bumuns||"-")+" | 선행활동: "+(acts||"-")+" | 설명: "+(m.note||"").slice(0,90)+"\n";
+  });
+  // 부문별 요약 (맥락)
+  s+="\n[부문별 과업 요약 (맥락용)]\n";
   GROUPS.forEach(g=>{
     const ts=state.tasks.filter(t=>t.g===g.id).sort((a,b)=>di(a.d)-di(b.d));
     if(!ts.length) return;
     const mn=Math.min.apply(null,ts.map(t=>di(t.d))), mx=Math.max.apply(null,ts.map(t=>di(t.e)));
-    s+="["+g.name+"] 리드:"+((ORGS[g.lead]||{}).short||g.lead)+", 기간:"+dstr(mn).slice(5)+"~"+dstr(mx).slice(5)+", 과업 "+ts.length+"개\n";
-    ts.forEach(t=>{ s+="  - "+t.name+" ("+((ORGS[t.org]||{}).short||t.org)+", "+t.d.slice(5)+"~"+t.e.slice(5)+(t.m?", ★마일스톤":"")+")\n"; });
+    s+="["+g.name+"] "+dstr(mn).slice(5)+"~"+dstr(mx).slice(5)+" ("+ts.length+"개): "+ts.slice(0,7).map(t=>t.name).join(", ")+"\n";
   });
   return s;
 }
@@ -1539,7 +1583,7 @@ async function generateReport(){
     let txt=((((j.candidates||[])[0]||{}).content||{}).parts||[]).map(p=>p.text||"").join("").trim();
     if(!txt){ throw new Error("빈 응답 (안전필터 또는 토큰초과 가능)"); }
     let data; try{ data=JSON.parse(txt); }catch(e){ const m=txt.match(/\{[\s\S]*\}/); data=m?JSON.parse(m[0]):null; }
-    if(!data || !data.sections){ throw new Error("보고서 형식 파싱 실패"); }
+    if(!data || !data.milestones){ throw new Error("보고서 형식 파싱 실패"); }
     lastReport=data;
     renderSlide(data);
     toast("보고서 생성 완료 ✓");
@@ -1552,25 +1596,24 @@ async function generateReport(){
 }
 /* 16:9 슬라이드 렌더 + 자동 맞춤 */
 function renderSlide(d){
-  const rows=(d.sections||[]).map(r=>`<tr>
-    <td style="width:15%;font-weight:700;color:#1a2340">${esc(r.bumun||"")}</td>
-    <td style="width:37%">${esc(r.activity||"")}</td>
-    <td style="width:12%">${esc(r.owner||"")}</td>
-    <td style="width:16%">${esc(r.period||"")}</td>
-    <td style="width:20%" class="${/[★◆]/.test(r.milestone||"")?'ms':''}">${esc(r.milestone||"")}</td></tr>`).join("");
-  const mils=(d.milestones||[]).map(m=>`<div class="sli">${esc(m)}</div>`).join("");
-  const risks=(d.risks||[]).map(m=>`<div class="sli">${esc(m)}</div>`).join("");
+  const rows=(d.milestones||[]).map(m=>{
+    const ex=/경영진|품질확인|런칭|Go/.test(m.name||"");
+    return `<tr${ex?' style="background:#eef1fb"':''}>
+    <td style="width:9%;font-weight:800;color:#4f46e5;white-space:nowrap">${esc(m.date||"")}</td>
+    <td style="width:23%;font-weight:700;color:#1a2340">${ex?'★ ':''}${esc(m.name||"")}</td>
+    <td style="width:34%">${esc(m.meaning||"")}</td>
+    <td style="width:15%;color:#4a5570">${esc(m.bumun||"")}</td>
+    <td style="width:19%">${esc(m.activities||"")}</td></tr>`;
+  }).join("");
+  const risks=(d.risks||[]).map(m=>`<span class="sli" style="display:inline-block;margin-right:18px">${esc(m)}</span>`).join("");
   $("pptWrap").innerHTML=`<div class="slidewrap"><div class="slide" id="theSlide"><div class="sbody">
-    <div class="stitle">${esc(d.title||"키둥이 서비스 런칭 워크플랜")}</div>
+    <div class="stitle">${esc(d.title||"키둥이 서비스 런칭 워크플랜 · 핵심 마일스톤")}</div>
     <div class="saccent"></div>
     <div class="soverview">${esc(d.overview||"")}</div>
-    <table class="sl"><thead><tr><th>부문</th><th>핵심 활동</th><th>담당</th><th>기간</th><th>핵심 마일스톤</th></tr></thead><tbody>${rows}</tbody></table>
+    <table class="sl"><thead><tr><th>시점</th><th>핵심 마일스톤</th><th>의미 (무엇이 완성·결정되나)</th><th>연관 부문</th><th>핵심 활동·산출물</th></tr></thead><tbody>${rows}</tbody></table>
     ${d.phase_timeline?`<div class="sphase">📍 ${esc(d.phase_timeline)}</div>`:""}
-    <div class="scols">
-      <div class="scol"><div class="scap">★ 핵심 마일스톤</div>${mils}</div>
-      <div class="scol"><div class="scap">⚠ 임계경로 · 핵심 리스크/의사결정</div>${risks}</div>
-    </div>
-    <div class="sfoot"><span>키둥이(가칭) 서비스 런칭 워크플랜 · 킥오프 6/24 → 정식 런칭 9/1</span><span>AI TF · 자동 생성(Gemini)</span></div>
+    <div class="scols" style="margin-top:12px"><div class="scol"><div class="scap">⚠ 핵심 리스크 · 의사결정</div><div>${risks}</div></div></div>
+    <div class="sfoot"><span>키둥이(가칭) 서비스 런칭 워크플랜 · 킥오프 6/24 → 정식 런칭 9/1 · 경영진 품질확인 3회</span><span>AI TF · 자동 생성(Gemini)</span></div>
   </div></div></div>`;
   requestAnimationFrame(fitSlide); setTimeout(fitSlide,60); setTimeout(fitSlide,220);
 }
@@ -1601,21 +1644,18 @@ function exportPptx(){
   s.addText(d.title||"키둥이 서비스 런칭 워크플랜",{x:0.45,y:0.28,w:12.4,h:0.6,fontFace:F,fontSize:26,bold:true,color:"1A2340"});
   s.addShape(p.ShapeType.rect,{x:0.47,y:0.92,w:1.25,h:0.06,fill:{color:"6366F1"}});
   s.addText(d.overview||"",{x:0.45,y:1.05,w:12.4,h:0.5,fontFace:F,fontSize:11.5,color:"42506B"});
-  const head=["부문","핵심 활동","담당","기간","핵심 마일스톤"].map(t=>({text:t,options:{bold:true,color:"FFFFFF",fill:"2B3350",align:"left"}}));
-  const body=(d.sections||[]).map(r=>[
-    {text:r.bumun||"",options:{bold:true,color:"1A2340"}},{text:r.activity||""},{text:r.owner||""},{text:r.period||""},
-    {text:r.milestone||"",options:{color:/[★◆]/.test(r.milestone||"")?"C026D3":"333333"}}]);
-  s.addTable([head,...body],{x:0.45,y:1.6,w:12.43,colW:[1.9,4.6,1.4,1.9,2.63],fontFace:F,fontSize:9,valign:"top",
+  const head=["시점","핵심 마일스톤","의미 (무엇이 완성·결정되나)","연관 부문","핵심 활동·산출물"].map(t=>({text:t,options:{bold:true,color:"FFFFFF",fill:"2B3350",align:"left"}}));
+  const body=(d.milestones||[]).map(m=>{ const ex=/경영진|품질확인|런칭|Go/.test(m.name||"");
+    return [{text:m.date||"",options:{bold:true,color:"4F46E5"}},{text:(ex?"★ ":"")+(m.name||""),options:{bold:true,color:"1A2340",fill:ex?"EEF1FB":"FFFFFF"}},
+      {text:m.meaning||""},{text:m.bumun||"",options:{color:"4A5570"}},{text:m.activities||""}]; });
+  s.addTable([head,...body],{x:0.45,y:1.6,w:12.43,colW:[1.05,2.95,4.35,1.85,2.23],fontFace:F,fontSize:8.5,valign:"top",
     border:{type:"solid",color:"CBD2E0",pt:0.5},autoPage:false});
-  const tblH=1.6+0.32*( (d.sections||[]).length+1 );
-  let cy=Math.min(tblH+0.15, 5.3);
-  if(d.phase_timeline){ s.addText("📍 "+d.phase_timeline,{x:0.45,y:cy,w:12.4,h:0.35,fontFace:F,fontSize:10,color:"4A5570",fill:{color:"EEF1F9"}}); cy+=0.5; }
-  const mils=(d.milestones||[]).map(m=>({text:m,options:{bullet:{code:"25B8"},fontSize:9.5,color:"333333",fontFace:F}}));
+  const tblH=1.6+0.34*( (d.milestones||[]).length+1 );
+  let cy=Math.min(tblH+0.15, 6.0);
+  if(d.phase_timeline){ s.addText("📍 "+d.phase_timeline,{x:0.45,y:cy,w:12.4,h:0.32,fontFace:F,fontSize:10,color:"4A5570",fill:{color:"EEF1F9"}}); cy+=0.45; }
+  s.addText("⚠ 핵심 리스크 · 의사결정",{x:0.45,y:cy,w:12,h:0.28,fontFace:F,fontSize:11,bold:true,color:"4F46E5"});
   const risks=(d.risks||[]).map(m=>({text:m,options:{bullet:{code:"25B8"},fontSize:9.5,color:"333333",fontFace:F}}));
-  s.addText("★ 핵심 마일스톤",{x:0.45,y:cy,w:6,h:0.3,fontFace:F,fontSize:11,bold:true,color:"4F46E5"});
-  s.addText("⚠ 임계경로 · 리스크/의사결정",{x:6.8,y:cy,w:6,h:0.3,fontFace:F,fontSize:11,bold:true,color:"4F46E5"});
-  s.addText(mils,{x:0.45,y:cy+0.32,w:6.1,h:7.3-(cy+0.32),fontFace:F,fontSize:9.5,color:"333333",valign:"top"});
-  s.addText(risks,{x:6.8,y:cy+0.32,w:6.05,h:7.3-(cy+0.32),fontFace:F,fontSize:9.5,color:"333333",valign:"top"});
+  s.addText(risks,{x:0.45,y:cy+0.3,w:12.4,h:Math.max(0.5,7.05-(cy+0.3)),fontFace:F,fontSize:9.5,color:"333333",valign:"top"});
   s.addText("키둥이(가칭) 서비스 런칭 워크플랜 · 킥오프 6/24 → 정식 런칭 9/1  |  AI TF · Gemini 자동 생성",{x:0.45,y:7.12,w:12.4,h:0.28,fontFace:F,fontSize:8,color:"9AA3B8"});
   p.writeFile({fileName:"키둥이_1P보고서_"+new Date().toISOString().slice(0,10)+".pptx"}).then(()=>toast("PPTX 다운로드 완료 ✓"));
 }
@@ -1794,6 +1834,7 @@ function init(){
   $("btnCP").classList.toggle("active",!!state.showCP);
   $("search").value=state.q||"";
   buildFilterChips();
+  updateLevelBtns();
   render();
   // scroll to show start
   setTimeout(()=>{ timeline.scrollLeft=0; },50);
