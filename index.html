@@ -1618,19 +1618,19 @@ function renderSlide(d){
     const ex=/고객조사|런칭|Go|네이밍|동결/.test(m.name||"");
     const nm=esc((m.name||"").replace(/^★\s*/,""));
     return `<tr${ex?' style="background:#eef1fb"':''}>
-    <td style="width:5.5%;font-weight:800;color:#4f46e5;text-align:center;white-space:nowrap">${esc(m.date||"")}</td>
-    <td style="width:18%;font-weight:700;color:#1a2340">${ex?'★ ':''}${nm}</td>
-    <td style="width:28%">${esc(m.meaning||"")}</td>
-    <td style="width:13.5%;color:#4a5570">${esc(m.bumun||"")}</td>
-    <td style="width:17.5%">${esc(m.activities||"")}</td>
-    <td style="width:17.5%;color:#0a7a34">${esc(m.criteria||"")}</td></tr>`;
+    <td style="font-weight:800;color:#4f46e5;text-align:center;white-space:nowrap">${esc(m.date||"")}</td>
+    <td style="font-weight:700;color:#1a2340">${ex?'★ ':''}${nm}</td>
+    <td>${esc(m.meaning||"")}</td>
+    <td style="color:#4a5570">${esc(m.bumun||"")}</td>
+    <td>${esc(m.activities||"")}</td>
+    <td style="color:#0a7a34">${esc(m.criteria||"")}</td></tr>`;
   }).join("");
   const risks=(d.risks||[]).map(m=>`<span class="sli" style="display:inline-block;margin-right:18px">${esc(m)}</span>`).join("");
   $("pptWrap").innerHTML=`<div class="slidewrap"><div class="slide" id="theSlide"><div class="sbody">
     <div class="stitle">${esc(d.title||"키둥이 서비스 런칭 워크플랜 · 핵심 마일스톤")}</div>
     <div class="saccent"></div>
     <div class="soverview">${esc(d.overview||"")}</div>
-    <table class="sl"><thead><tr><th style="text-align:center">시점</th><th>핵심 마일스톤</th><th>의미 (무엇이 완성·결정되나)</th><th>연관 부문</th><th>핵심 활동·산출물</th><th>완료 판정 기준</th></tr></thead><tbody>${rows}</tbody></table>
+    <table class="sl"><colgroup><col style="width:5.5%"><col style="width:18%"><col style="width:29%"><col style="width:13%"><col style="width:17.5%"><col style="width:17%"></colgroup><thead><tr><th style="text-align:center">시점</th><th>핵심 마일스톤</th><th>의미 (무엇이 완성·결정되나)</th><th>연관 부문</th><th>핵심 활동·산출물</th><th>완료 판정 기준</th></tr></thead><tbody>${rows}</tbody></table>
     ${d.phase_timeline?`<div class="sphase">📍 ${esc(d.phase_timeline)}</div>`:""}
     <div class="scols" style="margin-top:12px"><div class="scol"><div class="scap">⚠ 핵심 리스크 · 의사결정</div><div>${risks}</div></div></div>
     <div class="sfoot"><span>키둥이(가칭) 서비스 런칭 워크플랜 · 킥오프 6/24 → 정식 런칭 9/1 · 사용자 고객조사(FGI) 3회 연동</span><span>AI TF · 자동 생성(Gemini)</span></div>
