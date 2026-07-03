@@ -1,41 +1,89 @@
-# 키둥이 서비스 런칭 워크플랜 · 간트차트
+# 키둥이 서비스 런칭 워크플랜 · 인터랙티브 간트차트
 
-키디키디 APP Add-on(LLM 큐레이팅 검색) **키둥이** 서비스 런칭(2026-09-01)을 위한
-인터랙티브 간트차트 워크플랜입니다. 킥오프(6/24)부터 런칭 주(8/31~9/6)까지 11주,
-11개 부문·약 95개 과업·연결관계·마일스톤·임계경로를 일단위로 관리합니다.
+키디키디 APP Add-on(LLM 대화형 큐레이팅 검색) **키둥이** 서비스 런칭(2026-09-01)을 위한
+단일 HTML 인터랙티브 간트차트 + 실시간 협업 + AI 어시스턴트.
 
-> ⚠️ **대외비** — 내부 조직·담당자·일정 정보를 포함합니다. URL을 외부에 공유하지 마세요.
-> (검색엔진 비노출(noindex) 설정됨. 단, 저장소가 공개이므로 링크/소스는 접근 가능합니다.)
+- 라이브: https://ksukjune-design.github.io/kidoongi-workplan/
+- 기간: 2026-06-22(월)~09-06(일), **11주**, 킥오프 6/24 → 정식 런칭 9/1(화)
+- 규모: **약 109개 과업 · 11개 부문 · 15개+ 마일스톤 · 150개+ 연결**
 
-## 사용법
-- **BAR 드래그**: 일정 이동 / **양끝 드래그**: 기간 조절 / **호버**: 상세 툴팁
-- **BAR 클릭**: 우측 패널에서 과업명·일정·담당·성격·선행·메모 편집, 삭제
-- **＋ 과업 추가**, **🔗 연결 모드**(선행→후행), **🎯 임계경로**(런칭 결정 체인)
-- 각 BAR 안 **조직 배지**(버튼형)로 담당 조직 표시 · **부문 접기**(요약 BAR)
-- **필터·검색·줌·색상 토글(조직/업무성격)**
-- **📄 1P 요약표**: 10pt 맑은 고딕 표 → PPT 붙여넣기/PDF 인쇄
+> ⚠️ **대외비** — 내부 조직·담당자·일정 정보 포함. URL을 외부에 공유하지 마세요(검색 비노출/noindex).
 
-## 함께 이어서 작업하기 (실시간 공유 · Supabase)
-데이터는 **Supabase**에 실시간 공유됩니다. **링크만 있으면 누구나 열람·편집**할 수 있고,
-변경은 즉시 모두에게 반영됩니다(좌상단 **🟢 실시간 연결**). 별도 로그인/토큰이 필요 없습니다.
+---
 
-### 최초 1회 설정 (테이블 생성)
-Supabase 대시보드 → **SQL Editor** → 아래 실행 (프로젝트: `ckabuiwrwdjnklpvgqya`):
-```sql
-create table if not exists public.gantt_state (
-  id text primary key,
-  data jsonb,
-  updated_at timestamptz default now()
-);
-alter table public.gantt_state enable row level security;
-create policy "public read"   on public.gantt_state for select using (true);
-create policy "public insert" on public.gantt_state for insert with check (true);
-create policy "public update" on public.gantt_state for update using (true) with check (true);
-alter publication supabase_realtime add table public.gantt_state;
-```
-> 연결값(`index.html`의 `SYNC`): url=`https://ckabuiwrwdjnklpvgqya.supabase.co`,
-> anonKey=publishable 키(클라이언트 공개용, 안전). 첫 접속자가 현재 데이터로 자동 시드합니다.
+## 1. 화면 구성 & 기능
 
-## 배포
-GitHub Pages(main / root)로 서비스됩니다. 과업 기본값은 `index.html`의 `DEFAULT_TASKS`,
-공유 데이터는 Supabase `gantt_state` 테이블에서 실시간 관리됩니다.
+### 간트차트
+- 가로축: 6/22~9/6 **일 단위 달력**(월·주차·요일 헤더, 6단계 페이즈 밴드, 주말 음영, 오늘·런칭 마커).
+- 세로축: 11개 부문(조직 × 업무성격 통합 프레임워크).
+- **BAR**: 시작~종료 일단위 바 / **마일스톤**: 다이아몬드 / **연결선**: 선행→후행 곡선 화살표.
+- **BAR 내부 조직 배지**(버튼형) + 글자 자동 명암 + 호버 툴팁.
+
+### 진행 상태 트래킹
+- 각 과업 상태: **예정 / 진행중 / 완료**. 종료일 경과+미완료 → **지연(⚠·빨강 테두리)** 자동.
+- BAR 하단 진행선·완료(✓)·상태점, 부문별 `완료/전체`·지연 수, 상단 **완료율·지연 수·전체 진행바**.
+- "오늘" 선은 실제 날짜로 이동(동적). 필터의 **진행** 칩으로 상태별 보기.
+
+### 보기 제어
+- **상세도 3단계**: 전체(109) → 중간 요약(마일스톤·임계경로·장기 과업, ~51) → 요약(부문별 요약 바, 11).
+- **정렬**: 부문순(스윔레인) / **일정순**(시작일 순 위→아래 마일스톤 워터폴).
+- **🎯 임계경로**: 9/1 런칭을 결정하는 최장 선행 체인 하이라이트.
+- **필터**(진행·조직·업무성격) / **검색** / **줌** / **색상 토글**(조직별↔업무성격별).
+
+### 편집
+- BAR 드래그 이동·양끝 리사이즈, 클릭 → 우측 패널(과업명·일정·부문·담당·**진행상태**·마일스톤·선행·메모), 추가/삭제.
+- **🔗 연결 모드**: 선행→후행 클릭으로 화살표 생성(화살표 클릭 삭제).
+
+### AI 기능 (Gemini)
+- **🤖 진행상황 AI 어시스턴트**(우하단): 메일 전문·진행보고 텍스트 또는 파일(PPTX·PDF·이미지·Word 등) 첨부
+  → 내용 분석 → **완료/진행된 과업 자동 감지** → 후보 확인 후 상태 일괄 변경.
+  - 이미지·PDF는 멀티모달로 직접 이해, Word/PPTX/Excel은 브라우저에서 텍스트 추출(JSZip).
+- **✨ 1P 보고서(AI)**: **핵심 마일스톤 중심** 16:9 슬라이드 자동 작성
+  (시점·마일스톤·의미(비개발자 설명)·연관 부문·핵심 활동·완료 판정 기준). **📥 PPTX 다운로드** / **🖨 PDF(16:9)**.
+- **⬇ 엑셀 표**: 전체 과업 CSV(UTF-8 BOM, 한글 엑셀 호환, 진행상태 컬럼 포함).
+
+---
+
+## 2. 프레임워크 (부문 × 업무성격)
+11개 부문: PM·거버넌스 / 기획·화면설계 / 데이터·RAG / 로직·큐레이션 / 인프라·서버 /
+개발·만드는 것 / 연동·얹히는 것 / 디자인·UX / 마케팅·네이밍 / 상품운영·고객조사 / QA·런칭·운영.
+업무성격 5종: 기획·거버넌스 / 개발-만드는 것 / 개발-얹히는 것 / 운영-피드백 / 운영-마케팅·상품.
+
+### 핵심 마일스톤 (사용자 고객조사 3회 연동)
+- **사용자 고객조사 #1 · Alpha (7/31)**: 핵심 DB·로직 개발서버 구동 + 테스트 프론트 → 1차 FGI
+- **사용자 고객조사 #2 · Beta (8/14)**: 키디 임베드·네이밍·디자인 완성 → 2차 FGI(크리티컬 발굴)
+- **사용자 고객조사 #3 · 최종 V1 (8/28)**: 배포 직전, 크리티컬 개선 완료 → 3차 FGI(운영·CS·IMC·MD)
+- 그 외: 인프라 설계 확정(7/10), 아키텍처 수정범위 확정(7/17), 정식 네이밍 확정(7/24),
+  기능 동결(8/21), 앱스토어 심사 승인(~8/31), 런칭 최종 승인(8/28), **정식 런칭(9/1)**.
+> 각 사용자 고객조사 결과는 별도 경영 품질 보고로 이어집니다(차트 표면에는 고객조사로 표기).
+
+---
+
+## 3. 실시간 협업 (Supabase)
+- 데이터는 Supabase `gantt_state`(row `kidoongi-main`)의 jsonb에 실시간 공유. **링크만 있으면 모두 열람·편집**.
+- 뷰 설정(필터·상세도·정렬·색상)은 개인 브라우저(localStorage)에만 저장.
+- 최초 1회 테이블 생성(SQL Editor):
+  ```sql
+  create table if not exists public.gantt_state (
+    id text primary key, data jsonb, updated_at timestamptz default now());
+  alter table public.gantt_state enable row level security;
+  create policy "public read"   on public.gantt_state for select using (true);
+  create policy "public insert" on public.gantt_state for insert with check (true);
+  create policy "public update" on public.gantt_state for update using (true) with check (true);
+  alter publication supabase_realtime add table public.gantt_state;
+  ```
+
+### Gemini API 키
+- AI 기능은 Gemini(`gemini-2.5-flash`) 사용. 키 우선순위: 개인 localStorage → Supabase `app-config` 행(팀 공유) → 앱 내 입력.
+- 키는 **소스/저장소에 절대 포함하지 않음**(공개 저장소 스크랩·자동폐기 방지).
+
+---
+
+## 4. 데이터 모델 (`index.html` 내)
+- `DEFAULT_TASKS`: 과업 배열. 각 항목 `{id, g(부문), org(담당), nat(업무성격), name, d(시작), e(종료), dep[선행], m(마일스톤), s(상태 todo/doing/done), note}`.
+- `GROUPS`(부문) / `ORGS`(담당 조직) / `NATURES`(업무성격) / `PHASES`(6단계) / `STATUS`(상태).
+- 날짜 기준: `DAY0=2026-06-22`, `DAYN=77`. `TODAY`는 실제 오늘로 갱신(지연 판정·마커).
+- 라이브 공유 데이터가 있으면 그것이 우선. 기본값 변경 시 앱에서 편집(→자동 동기화) 또는 `DEFAULT_TASKS` 수정 후 재시드.
+
+## 5. 배포
+GitHub Pages(main / root). `index.html` 커밋·푸시 → 자동 재빌드. 외부 라이브러리(CDN): Supabase-js, PptxGenJS, JSZip.
