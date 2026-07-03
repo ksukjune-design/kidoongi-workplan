@@ -371,7 +371,7 @@
     <button class="btn sm" id="btnConnect">🔗 연결 모드</button>
     <button class="btn sm" id="btnAdd">＋ 과업 추가</button>
     <button class="btn sm" id="btnExcel">⬇ 엑셀 표</button>
-    <button class="btn sm primary" id="btnReport">✨ 1P 보고서(AI)</button>
+    <button class="btn sm primary" id="btnReport">📄 1P 보고서</button>
     <button class="btn sm warn" id="btnReset">↺ 초기화</button>
     <button class="btn sm" id="btnHelp">? 도움말</button>
   </div>
@@ -452,16 +452,18 @@
   </div>
 </div>
 
-<!-- AI 1P 보고서 modal -->
+<!-- 1P 보고서 modal -->
 <div class="overlay" id="pptOverlay">
   <div class="modal" style="max-width:1240px;">
     <div class="mhead">
-      <h3>✨ AI 1페이지 보고서 <span style="font-weight:400;color:var(--muted);font-size:12px">Gemini · 16:9 슬라이드</span></h3>
+      <h3 id="pptTitle">📄 1페이지 요약 보고서 <span style="font-weight:400;color:var(--muted);font-size:12px">확정 마스터본</span></h3>
       <div class="spacer"></div>
-      <button class="btn sm" id="pptRegen">🔄 재생성</button>
-      <button class="btn sm" id="pptKey">🔑 키</button>
       <button class="btn sm primary" id="pptPptx">📥 PPTX 다운로드</button>
-      <button class="btn sm" id="pptPrint">🖨 PDF(16:9)</button>
+      <button class="btn sm primary" id="pptPrint">🖨 PDF 다운로드</button>
+      <button class="btn sm" id="pptNew">➕ 새 페이지 생성(AI 편집)</button>
+      <button class="btn sm" id="pptRegen" style="display:none">🔄 재생성</button>
+      <button class="btn sm" id="pptKey" style="display:none">🔑 키</button>
+      <button class="btn sm" id="pptBack" style="display:none">← 마스터</button>
       <button class="btn sm" id="pptClose">닫기</button>
     </div>
     <div class="mbody"><div id="pptWrap"></div></div>
@@ -1518,29 +1520,29 @@ $("btnExcel").onclick=()=>{
    (2) AI 1페이지 보고서 (Gemini 호출)
    ============================================================ */
 const GEMINI={ model:"gemini-2.5-flash", keyLS:"kidoongi_gemini_key" };
-const REPORT_PROMPT=`너는 PM 보좌 AI다. 아래 '키둥이 서비스 런칭 워크플랜'(키디키디 APP Add-on LLM 큐레이팅 검색, 2026-09-01 런칭)을 1페이지 요약 보고용 **16:9 슬라이드 1장**으로, **핵심 마일스톤 중심**으로 압축하라.
+const REPORT_PROMPT=`너는 PM 보좌 AI다. 아래 '키둥이 서비스 런칭 워크플랜'(키디키디 APP Add-on LLM 큐레이팅 검색, 2026-09-01 런칭)을 1페이지 요약 보고용 **16:9 슬라이드 1장**으로, **핵심 마일스톤 중심**으로 압축하라. (사내 확정 마스터 양식과 동일한 구조)
 [규칙]
-- 개별 과업을 나열하지 말 것. **핵심 마일스톤을 축으로**, 각 마일스톤이 어떤 업무영역(부문)과 세부 핵심활동으로 엮여 달성되는지를 보여줘라.
+- 개별 과업을 나열하지 말 것. **핵심 마일스톤을 축으로**, 각 마일스톤이 어떤 부문(조직·이슈)과 실행 액션·아웃풋으로 엮여 달성되는지를 보여줘라.
 - 반드시 아래 [핵심 마일스톤] 목록을 근거로 사용(특히 '사용자 고객조사 #1~#3'은 반드시 포함). milestones는 시간순 7~9개.
 - 각 milestone 필드:
-  · name: 마일스톤명(간결)
   · date: 시점(M/D)
-  · meaning: 그 시점에 '무엇이 완성/결정되는지'를 **비개발자도 이해할 쉬운 한 문장**(전문용어 지양)
-  · bumun: 연관 부문 2~4개(쉼표로)
-  · activities: 핵심 활동/산출물 1~2개(각 20자 내외)
-  · criteria: **완료 판정 기준** — 무엇을 보면 이 마일스톤이 달성됐다고 볼 수 있는지(20자 내외, 1~2개)
-- overview: 1~2문장(킥오프 6/24 → 정식 런칭 9/1(화), 총 11주, 사용자 고객조사(FGI) 3회가 각 시점에 연동).
+  · name: 마일스톤명(간결)
+  · action: **실행하는 액션** — 그 시점에 실제로 수행하는 일을 비개발자도 이해할 쉬운 문장으로(전문용어 지양)
+  · bumun: **연관 부문(조직·이슈)** — 관련 부문/조직 2~4개, 필요시 핵심 이슈 짧게
+  · output: **아웃풋** — 산출물/결과물 1~2개(각 20자 내외)
+  · criteria: **완료 판정 기준** — 무엇을 보면 달성됐다고 볼 수 있는지(20자 내외, 1~2개)
+- overview_points: 프로젝트 개요 불릿 3~4개(예: 서비스 정의·기간, 개발 프레임워크, 4자 협업 특성, 사용자 고객조사(FGI) 3회로 품질 검증).
 - phase_timeline: 6단계 페이즈 화살표(→) 1줄.
-- risks: 핵심 리스크/의사결정 3~4개(예: 정식 네이밍 확정, 데이터 정제·색인 품질, 커머스플랫폼 연동범위, 앱스토어 심사 리드타임, 인바운드 30% 부하).
+- risks: 핵심 리스크/의사결정 3~5개(예: 정식 네이밍 확정, 데이터 정제·색인 품질, 커머스플랫폼 연동범위, 앱스토어 심사 리드타임, 인바운드 30% 부하).
 - 한국어, 과장 없이 사실 기반.`;
 const REPORT_SCHEMA={ type:"object", properties:{
-  title:{type:"string"}, overview:{type:"string"},
+  title:{type:"string"}, overview_points:{type:"array", items:{type:"string"}},
   milestones:{type:"array", items:{type:"object", properties:{
-    name:{type:"string"}, date:{type:"string"}, meaning:{type:"string"}, bumun:{type:"string"}, activities:{type:"string"}, criteria:{type:"string"}
-  }, required:["name","date","meaning","bumun","activities","criteria"]}},
+    date:{type:"string"}, name:{type:"string"}, action:{type:"string"}, bumun:{type:"string"}, output:{type:"string"}, criteria:{type:"string"}
+  }, required:["date","name","action","bumun","output","criteria"]}},
   phase_timeline:{type:"string"},
   risks:{type:"array", items:{type:"string"}}
-}, required:["title","overview","milestones","phase_timeline","risks"] };
+}, required:["title","overview_points","milestones","phase_timeline","risks"] };
 let lastReport=null;
 
 function buildWorkplanSummary(){
@@ -1612,7 +1614,7 @@ async function generateReport(){
     const rb=document.getElementById("gemKeyRetry"); if(rb) rb.onclick=promptGeminiKey;
   }
 }
-/* 16:9 슬라이드 렌더 + 자동 맞춤 */
+/* 16:9 슬라이드 렌더 + 자동 맞춤 (마스터 양식 · 편집 가능) */
 function renderSlide(d){
   const rows=(d.milestones||[]).map(m=>{
     const ex=/고객조사|런칭|Go|네이밍|동결/.test(m.name||"");
@@ -1620,20 +1622,23 @@ function renderSlide(d){
     return `<tr${ex?' style="background:#eef1fb"':''}>
     <td style="font-weight:800;color:#4f46e5;text-align:center;white-space:nowrap">${esc(m.date||"")}</td>
     <td style="font-weight:700;color:#1a2340">${ex?'★ ':''}${nm}</td>
-    <td>${esc(m.meaning||"")}</td>
+    <td>${esc(m.action||m.meaning||"")}</td>
     <td style="color:#4a5570">${esc(m.bumun||"")}</td>
-    <td>${esc(m.activities||"")}</td>
+    <td>${esc(m.output||m.activities||"")}</td>
     <td style="color:#0a7a34">${esc(m.criteria||"")}</td></tr>`;
   }).join("");
+  const ovp=(d.overview_points||(d.overview?[d.overview]:[])).map(t=>`<div class="sli">${esc(t)}</div>`).join("");
   const risks=(d.risks||[]).map(m=>`<span class="sli" style="display:inline-block;margin-right:18px">${esc(m)}</span>`).join("");
-  $("pptWrap").innerHTML=`<div class="slidewrap"><div class="slide" id="theSlide"><div class="sbody">
+  $("pptWrap").innerHTML=`<div class="slidewrap"><div class="slide" id="theSlide"><div class="sbody" contenteditable="true" spellcheck="false">
     <div class="stitle">${esc(d.title||"키둥이 서비스 런칭 워크플랜 · 핵심 마일스톤")}</div>
     <div class="saccent"></div>
-    <div class="soverview">${esc(d.overview||"")}</div>
-    <table class="sl"><colgroup><col style="width:5.5%"><col style="width:18%"><col style="width:29%"><col style="width:13%"><col style="width:17.5%"><col style="width:17%"></colgroup><thead><tr><th style="text-align:center">시점</th><th>핵심 마일스톤</th><th>의미 (무엇이 완성·결정되나)</th><th>연관 부문</th><th>핵심 활동·산출물</th><th>완료 판정 기준</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="scap" style="margin-bottom:4px">📌 프로젝트 개요</div>
+    <div class="soverview">${ovp}</div>
+    <div class="scap" style="margin:10px 0 4px">🗺 상세 마일스톤 (Gantt Summary)</div>
+    <table class="sl"><colgroup><col style="width:5%"><col style="width:15%"><col style="width:26%"><col style="width:15%"><col style="width:21%"><col style="width:18%"></colgroup><thead><tr><th style="text-align:center">시점</th><th>마일스톤</th><th>실행하는 액션</th><th>연관 부문 (조직·이슈)</th><th>아웃풋</th><th>완료 판정 기준</th></tr></thead><tbody>${rows}</tbody></table>
     ${d.phase_timeline?`<div class="sphase">📍 ${esc(d.phase_timeline)}</div>`:""}
-    <div class="scols" style="margin-top:12px"><div class="scol"><div class="scap">⚠ 핵심 리스크 · 의사결정</div><div>${risks}</div></div></div>
-    <div class="sfoot"><span>키둥이(가칭) 서비스 런칭 워크플랜 · 킥오프 6/24 → 정식 런칭 9/1 · 사용자 고객조사(FGI) 3회 연동</span><span>AI TF · 자동 생성(Gemini)</span></div>
+    <div class="scols" style="margin-top:10px"><div class="scol"><div class="scap">⚠ 핵심 리스크 · 의사결정</div><div>${risks}</div></div></div>
+    <div class="sfoot"><span>키둥이(가칭) 서비스 런칭 워크플랜 · 킥오프 6/24 → 정식 런칭 9/1 · 사용자 고객조사(FGI) 3회 연동</span><span>AI TF · 자동 생성(편집 가능)</span></div>
   </div></div></div>`;
   requestAnimationFrame(fitSlide); setTimeout(fitSlide,60); setTimeout(fitSlide,220);
 }
@@ -1653,38 +1658,77 @@ function fitSlide(){
   wrap.style.height=(720*k+12)+"px";
 }
 window.addEventListener("resize",()=>{ if(document.getElementById("theSlide")) fitSlide(); });
-/* 실제 PPTX(.pptx) 내보내기 — 16:9 와이드 */
+/* 편집된 슬라이드 DOM에서 보고서 데이터 재수집(편집 반영) */
+function readSlideDOM(){
+  const sl=document.getElementById("theSlide"); if(!sl) return lastReport;
+  const t=sel=>{ const e=sl.querySelector(sel); return e?e.textContent.trim():""; };
+  const list=sel=>[...sl.querySelectorAll(sel)].map(e=>e.textContent.trim()).filter(Boolean);
+  const milestones=[...sl.querySelectorAll("table.sl tbody tr")].map(tr=>{
+    const c=[...tr.querySelectorAll("td")].map(td=>td.textContent.trim());
+    return {date:c[0]||"", name:(c[1]||"").replace(/^★\s*/,""), action:c[2]||"", bumun:c[3]||"", output:c[4]||"", criteria:c[5]||""};
+  });
+  return { title:t(".stitle"), overview_points:list(".soverview .sli"), milestones,
+    phase_timeline:t(".sphase").replace(/^📍\s*/,""), risks:list(".scols .sli") };
+}
+/* 실제 PPTX(.pptx) 내보내기 — 16:9 와이드 (편집 반영) */
 function exportPptx(){
-  if(!lastReport){ toast("먼저 보고서를 생성하세요"); return; }
   if(typeof PptxGenJS==="undefined"){ toast("PPTX 라이브러리 로드 실패"); return; }
-  const d=lastReport, p=new PptxGenJS();
+  const d=readSlideDOM(); if(!d||!d.milestones){ toast("먼저 '새 페이지 생성'으로 보고서를 만드세요"); return; }
+  const p=new PptxGenJS();
   p.defineLayout({name:"W16x9",width:13.333,height:7.5}); p.layout="W16x9";
-  const s=p.addSlide(); s.background={color:"FFFFFF"};
-  const F="맑은 고딕";
-  s.addText(d.title||"키둥이 서비스 런칭 워크플랜",{x:0.45,y:0.28,w:12.4,h:0.6,fontFace:F,fontSize:26,bold:true,color:"1A2340"});
-  s.addShape(p.ShapeType.rect,{x:0.47,y:0.92,w:1.25,h:0.06,fill:{color:"6366F1"}});
-  s.addText(d.overview||"",{x:0.45,y:1.05,w:12.4,h:0.5,fontFace:F,fontSize:11.5,color:"42506B"});
-  const head=["시점","핵심 마일스톤","의미 (무엇이 완성·결정되나)","연관 부문","핵심 활동·산출물","완료 판정 기준"].map(t=>({text:t,options:{bold:true,color:"FFFFFF",fill:"2B3350",align:"left"}}));
-  const body=(d.milestones||[]).map(m=>{ const ex=/고객조사|런칭|Go|네이밍|동결/.test(m.name||""); const nm=(m.name||"").replace(/^★\s*/,"");
-    return [{text:m.date||"",options:{bold:true,color:"4F46E5",align:"center"}},{text:(ex?"★ ":"")+nm,options:{bold:true,color:"1A2340",fill:ex?"EEF1FB":"FFFFFF"}},
-      {text:m.meaning||""},{text:m.bumun||"",options:{color:"4A5570"}},{text:m.activities||""},{text:m.criteria||"",options:{color:"0A7A34"}}]; });
-  s.addTable([head,...body],{x:0.45,y:1.6,w:12.43,colW:[0.75,2.5,3.6,1.7,2.0,1.88],fontFace:F,fontSize:8.5,valign:"top",
+  const s=p.addSlide(); s.background={color:"FFFFFF"}; const F="맑은 고딕";
+  s.addText(d.title||"키둥이 서비스 런칭 워크플랜",{x:0.45,y:0.26,w:12.4,h:0.55,fontFace:F,fontSize:24,bold:true,color:"1A2340"});
+  s.addShape(p.ShapeType.rect,{x:0.47,y:0.86,w:1.2,h:0.055,fill:{color:"6366F1"}});
+  const ovp=(d.overview_points||[]).map(x=>({text:x,options:{bullet:{code:"25CB"},fontSize:9.5,color:"42506B",fontFace:F,breakLine:true}}));
+  s.addText(ovp.length?ovp:[{text:""}],{x:0.45,y:0.98,w:12.4,h:0.85,valign:"top"});
+  const head=["시점","마일스톤","실행하는 액션","연관 부문 (조직·이슈)","아웃풋","완료 판정 기준"].map(t=>({text:t,options:{bold:true,color:"FFFFFF",fill:"2B3350",align:"left"}}));
+  const body=(d.milestones||[]).map(m=>{ const ex=/고객조사|런칭|Go|네이밍|동결/.test(m.name||"");
+    return [{text:m.date||"",options:{bold:true,color:"4F46E5",align:"center"}},{text:(ex?"★ ":"")+(m.name||""),options:{bold:true,color:"1A2340",fill:ex?"EEF1FB":"FFFFFF"}},
+      {text:m.action||""},{text:m.bumun||"",options:{color:"4A5570"}},{text:m.output||""},{text:m.criteria||"",options:{color:"0A7A34"}}]; });
+  const ty=1.95;
+  s.addTable([head,...body],{x:0.45,y:ty,w:12.43,colW:[0.62,1.86,3.23,1.86,2.61,2.25],fontFace:F,fontSize:8.3,valign:"top",
     border:{type:"solid",color:"CBD2E0",pt:0.5},autoPage:false});
-  const tblH=1.6+0.34*( (d.milestones||[]).length+1 );
-  let cy=Math.min(tblH+0.15, 6.0);
-  if(d.phase_timeline){ s.addText("📍 "+d.phase_timeline,{x:0.45,y:cy,w:12.4,h:0.32,fontFace:F,fontSize:10,color:"4A5570",fill:{color:"EEF1F9"}}); cy+=0.45; }
-  s.addText("⚠ 핵심 리스크 · 의사결정",{x:0.45,y:cy,w:12,h:0.28,fontFace:F,fontSize:11,bold:true,color:"4F46E5"});
-  const risks=(d.risks||[]).map(m=>({text:m,options:{bullet:{code:"25B8"},fontSize:9.5,color:"333333",fontFace:F}}));
-  s.addText(risks,{x:0.45,y:cy+0.3,w:12.4,h:Math.max(0.5,7.05-(cy+0.3)),fontFace:F,fontSize:9.5,color:"333333",valign:"top"});
-  s.addText("키둥이(가칭) 서비스 런칭 워크플랜 · 킥오프 6/24 → 정식 런칭 9/1  |  AI TF · Gemini 자동 생성",{x:0.45,y:7.12,w:12.4,h:0.28,fontFace:F,fontSize:8,color:"9AA3B8"});
+  let cy=Math.min(ty+0.33*((d.milestones||[]).length+1)+0.12, 6.1);
+  if(d.phase_timeline){ s.addText("📍 "+d.phase_timeline,{x:0.45,y:cy,w:12.4,h:0.3,fontFace:F,fontSize:9.5,color:"4A5570",fill:{color:"EEF1F9"}}); cy+=0.42; }
+  s.addText("⚠ 핵심 리스크 · 의사결정",{x:0.45,y:cy,w:12,h:0.26,fontFace:F,fontSize:10.5,bold:true,color:"4F46E5"});
+  s.addText((d.risks||[]).map(m=>({text:m,options:{bullet:{code:"25B8"},fontSize:9,color:"333333",fontFace:F,breakLine:true}})),{x:0.45,y:cy+0.28,w:12.4,h:Math.max(0.4,7.05-(cy+0.28)),valign:"top"});
+  s.addText("키둥이(가칭) 서비스 런칭 워크플랜 · 킥오프 6/24 → 정식 런칭 9/1 · 사용자 고객조사(FGI) 3회",{x:0.45,y:7.12,w:12.4,h:0.26,fontFace:F,fontSize:8,color:"9AA3B8"});
   p.writeFile({fileName:"키둥이_1P보고서_"+new Date().toISOString().slice(0,10)+".pptx"}).then(()=>toast("PPTX 다운로드 완료 ✓"));
 }
-$("btnReport").onclick=generateReport;
+
+/* ===== 보고서 모달: 마스터(다운로드) / 새 페이지(AI 편집) 2모드 ===== */
+const MASTER_PPTX="report/1page_master.pptx", MASTER_PDF="report/1page_master.pdf";
+let reportMode="master";
+function dlFile(url,name){ const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
+function showReportButtons(){
+  const ai = reportMode==="ai";
+  $("pptNew").style.display   = ai?"none":"";
+  $("pptRegen").style.display = ai?"":"none";
+  $("pptKey").style.display   = ai?"":"none";
+  $("pptBack").style.display  = ai?"":"none";
+  $("pptPptx").textContent    = ai?"📥 이 페이지 PPTX":"📥 PPTX 다운로드";
+  $("pptPrint").textContent   = ai?"🖨 이 페이지 PDF":"🖨 PDF 다운로드";
+  $("pptTitle").innerHTML = ai
+    ? '✨ 새 페이지 (AI · 편집 가능) <span style="font-weight:400;color:var(--muted);font-size:12px">셀을 클릭해 수정 후 내보내기</span>'
+    : '📄 1페이지 요약 보고서 <span style="font-weight:400;color:var(--muted);font-size:12px">확정 마스터본</span>';
+}
+function openReport(){
+  reportMode="master"; showReportButtons();
+  $("pptWrap").innerHTML=`<div style="text-align:center">
+    <div style="color:#9aa7c2;font-size:12px;padding:6px 0 10px">확정 마스터 1페이지 보고서 미리보기 · 상단 버튼으로 <b style="color:#e8edf7">PPTX/PDF 다운로드</b> 또는 <b style="color:#e8edf7">＋새 페이지 생성</b></div>
+    <iframe src="${MASTER_PDF}#toolbar=1&navpanes=0" style="width:100%;height:66vh;border:1px solid var(--line2);border-radius:8px;background:#fff"></iframe>
+  </div>`;
+  $("pptOverlay").classList.add("show");
+}
+function newReportPage(){ reportMode="ai"; showReportButtons(); generateReport(); }
+$("btnReport").onclick=openReport;
+$("pptNew").onclick=newReportPage;
+$("pptBack").onclick=openReport;
 $("pptRegen").onclick=generateReport;
 $("pptKey").onclick=promptGeminiKey;
 $("pptClose").onclick=()=>$("pptOverlay").classList.remove("show");
-$("pptPrint").onclick=()=>{ if(!lastReport){ toast("먼저 보고서를 생성하세요"); return; } window.print(); };
-$("pptPptx").onclick=exportPptx;
+$("pptPptx").onclick=()=>{ if(reportMode==="ai") exportPptx(); else dlFile(MASTER_PPTX,"키둥이_서비스_런칭_워크플랜_1P보고서.pptx"); };
+$("pptPrint").onclick=()=>{ if(reportMode==="ai"){ if(!document.getElementById("theSlide")){toast("먼저 보고서를 생성하세요");return;} window.print(); } else dlFile(MASTER_PDF,"키둥이_서비스_런칭_워크플랜_1P보고서.pdf"); };
 
 /* ============================================================
    스크롤 동기화 & 기타
