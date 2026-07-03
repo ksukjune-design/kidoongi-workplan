@@ -352,9 +352,8 @@
     <div class="tgroup">
       <span class="tlab">상세도</span>
       <button class="btn sm" id="lv0" title="모든 과업 표시">전체</button>
-      <button class="btn sm" id="lv1" title="마일스톤·임계경로·장기 과업만">주요</button>
-      <button class="btn sm" id="lv2" title="마일스톤·임계경로만">핵심</button>
-      <button class="btn sm" id="lv3" title="부문별 요약 바로 접기">요약</button>
+      <button class="btn sm" id="lv1" title="마일스톤·임계경로·핵심(장기) 과업만">중간 요약</button>
+      <button class="btn sm" id="lv2" title="부문별 요약 바로 접기">요약</button>
     </div>
     <div class="tgroup zoom">
       <span class="tlab">줌</span>
@@ -476,7 +475,7 @@
         <p><b>✅ 진행 상태</b> — BAR를 클릭해 <b>예정/진행중/완료</b>를 설정하면, 바 하단 진행선·완료(✓)·상태점이 표시됩니다. 종료일이 지났는데 미완료면 <b>지연(⚠·빨강 테두리)</b>으로 자동 표시. 상단에 <b>완료율·지연 수</b>와 전체 <b>진행바</b>가 집계되고, 필터의 <b>진행</b> 칩으로 상태별로 볼 수 있습니다. 노란 "오늘" 선은 실제 오늘 날짜로 움직입니다.</p>
         <p><b>🎯 임계경로</b> — 버튼을 켜면 <b>9/1 런칭을 결정하는 과업 체인</b>(가장 긴 선행 경로)이 분홍색으로 강조됩니다. 이 경로가 지연되면 런칭일이 밀립니다.</p>
         <p><b>🗂 페이즈</b> — 상단 밴드는 6단계(킥오프·발굴 → 설계·확정 → 구축·개발 → 통합·연동 → QA·안정화 → 런칭·운영). 노란 점선 밴드는 <b>이번 주(7/1)</b>.</p>
-        <p><b>🔎 상세도(4단계)</b> — <kbd>전체</kbd>(모든 과업) → <kbd>주요</kbd>(마일스톤·임계경로·장기 과업만) → <kbd>핵심</kbd>(마일스톤·임계경로만) → <kbd>요약</kbd>(부문별 1개 요약 BAR). 왼쪽 부문 헤더를 클릭하면 개별 부문도 접고 펼 수 있습니다.</p>
+        <p><b>🔎 상세도(3단계)</b> — <kbd>전체</kbd>(모든 과업) → <kbd>중간 요약</kbd>(마일스톤·임계경로·핵심 장기 과업만) → <kbd>요약</kbd>(부문별 1개 요약 BAR). 왼쪽 부문 헤더를 클릭하면 개별 부문도 접고 펼 수 있습니다.</p>
         <p><b>⚙ 필터</b> — 조직/업무성격 칩을 눌러 특정 그룹만 강조. 검색창으로 과업명 필터.</p>
         <p><b>💾 저장</b> — 뷰 설정(필터·접기·색상)은 각자 브라우저에 저장됩니다. <kbd>초기화</kbd>로 기본값 복원.</p>
         <p><b>🔗 실시간 공유(함께 이어서 작업)</b> — 데이터는 Supabase에 실시간 공유됩니다. <b>링크만 있으면 누구나</b> 열람·편집할 수 있고, 변경은 즉시 모두에게 반영됩니다(좌상단 <b>🟢 실시간 연결</b>). 별도 로그인/토큰이 필요 없습니다.</p>
@@ -752,6 +751,7 @@ let state = load() || {
 };
 if(!state.filterStat) state.filterStat=[];
 if(state.detail===undefined) state.detail=0;
+if(state.detail>2) state.detail=2;   // 구버전(4단계) 상태 보정
 function load(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)); }catch(e){ return null; } }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); schedulePush(); }
 
@@ -874,8 +874,7 @@ function buildRows(){
     rows.push({type:"group", g, tasks:gtasks});
     if(!state.collapsed[g.id]){
       let vis = gtasks.slice().sort((a,b)=> di(a.d)-di(b.d) || durDays(b)-durDays(a));
-      if(d===1) vis=vis.filter(isMajor);
-      else if(d===2) vis=vis.filter(isCore);
+      if(d===1) vis=vis.filter(isMajor);   // 중간 요약: 마일스톤·임계경로·장기 과업
       vis.forEach(t=> rows.push({type:"task", t, g}));
     }
   });
@@ -1392,17 +1391,16 @@ $("btnAdd").onclick=()=>{
    ============================================================ */
 $("colorOrg").onclick=()=>{ state.colorMode="org"; $("colorOrg").classList.add("active"); $("colorNat").classList.remove("active"); render(); };
 $("colorNat").onclick=()=>{ state.colorMode="nat"; $("colorNat").classList.add("active"); $("colorOrg").classList.remove("active"); render(); };
-function updateLevelBtns(){ [0,1,2,3].forEach(i=>$("lv"+i).classList.toggle("active", (state.detail||0)===i)); }
+function updateLevelBtns(){ [0,1,2].forEach(i=>$("lv"+i).classList.toggle("active", (state.detail||0)===i)); }
 function setDetail(lv){
   state.detail=lv;
-  if(lv===3){ GROUPS.forEach(g=>state.collapsed[g.id]=true); }   // 요약: 부문 접기
-  else { state.collapsed={}; }                                   // 전체/주요/핵심: 펼치고 필터
+  if(lv===2){ GROUPS.forEach(g=>state.collapsed[g.id]=true); }   // 요약: 부문 접기
+  else { state.collapsed={}; }                                   // 전체/중간요약: 펼치고 필터
   updateLevelBtns(); render();
 }
 $("lv0").onclick=()=>setDetail(0);
 $("lv1").onclick=()=>setDetail(1);
 $("lv2").onclick=()=>setDetail(2);
-$("lv3").onclick=()=>setDetail(3);
 $("zoom").oninput=(e)=>{ state.dw=+e.target.value; render(); };
 $("search").oninput=(e)=>{ state.q=e.target.value; render(); };
 $("toggleFilter").onclick=()=>{ $("filterbar").classList.toggle("show"); };
